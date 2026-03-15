@@ -38,6 +38,10 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential \
+            pkg-config \
+            libcairo2-dev \
+            libffi-dev \
+            python3-dev \
             libfreetype6-dev \
             libjpeg-dev \
             zlib1g-dev \
@@ -51,26 +55,31 @@ jobs:
       - name: Build EN and ID binaries
         run: python scripts/build.py --lang all
 
-      - name: Package Windows artifacts
+      - name: Prepare Windows release assets
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release-assets | Out-Null
-          Compress-Archive -Path dist/glrc-en.exe,dist/glrc-id.exe -DestinationPath release-assets/glrc-windows.zip -Force
+          Copy-Item dist/glrc-en.exe release-assets/glrc-en-windows.exe -Force
+          Copy-Item dist/glrc-id.exe release-assets/glrc-id-windows.exe -Force
 
-      - name: Package Linux artifacts
+      - name: Prepare Linux release assets
         if: runner.os == 'Linux'
         run: |
           mkdir -p release-assets
-          tar -czf release-assets/glrc-linux.tar.gz -C dist glrc-en glrc-id
+          cp dist/glrc-en release-assets/glrc-en-linux
+          cp dist/glrc-id release-assets/glrc-id-linux
+          chmod +x release-assets/glrc-en-linux release-assets/glrc-id-linux
 
-      - name: Package macOS artifacts
+      - name: Prepare macOS release assets
         if: runner.os == 'macOS'
         run: |
           mkdir -p release-assets
-          tar -czf release-assets/glrc-macos.tar.gz -C dist glrc-en glrc-id
+          cp dist/glrc-en release-assets/glrc-en-macos
+          cp dist/glrc-id release-assets/glrc-id-macos
+          chmod +x release-assets/glrc-en-macos release-assets/glrc-id-macos
 
-      - name: Upload packaged artifacts
+      - name: Upload release artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.os }}
@@ -107,10 +116,14 @@ jobs:
             ## GLRC v1.0.0 Highlights
             - Multi-language desktop binaries: EN and ID
             - Cross-platform release assets for Windows, macOS, and Linux
+            - Direct executable attachments (no zip/tar wrappers)
             - Unified build pipeline with VERSION-driven app metadata
             - Automatic icon generation (multi-size) and build asset bundling
             - UI/UX improvements: dialogs, pagination, profile token duration updates
           files: |
-            release-assets/glrc-windows.zip
-            release-assets/glrc-linux.tar.gz
-            release-assets/glrc-macos.tar.gz
+            release-assets/glrc-en-windows.exe
+            release-assets/glrc-id-windows.exe
+            release-assets/glrc-en-linux
+            release-assets/glrc-id-linux
+            release-assets/glrc-en-macos
+            release-assets/glrc-id-macos
