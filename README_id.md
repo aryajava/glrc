@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://raw.githubusercontent.com/FreeTubeApp/FreeTube/development/assets/logo.png" alt="GLRC Logo" width="128" height="128" />
+  <img src="https://github.com/aryajava/glrc/blob/main/assets/icons/logo.png" alt="GLRC Logo" width="128" height="128" />
   <h1>GLRC: GitLab Repo Cloner</h1>
   <p><strong>Aplikasi desktop lintas platform nan tangguh yang dirancang khusus untuk mengelola, menarik (pull), dan menyalin (clone) ratusan repositori GitLab secara serentak dan instan.</strong></p>
   
