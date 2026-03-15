@@ -60,24 +60,27 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release-assets | Out-Null
-          Copy-Item dist/glrc-en.exe release-assets/glrc-en-windows.exe -Force
-          Copy-Item dist/glrc-id.exe release-assets/glrc-id-windows.exe -Force
+          $arch = "${{ runner.arch }}".ToLower()
+          Copy-Item dist/glrc-en.exe "release-assets/glrc-en-windows-$arch.exe" -Force
+          Copy-Item dist/glrc-id.exe "release-assets/glrc-id-windows-$arch.exe" -Force
 
       - name: Prepare Linux release assets
         if: runner.os == 'Linux'
         run: |
           mkdir -p release-assets
-          cp dist/glrc-en release-assets/glrc-en-linux
-          cp dist/glrc-id release-assets/glrc-id-linux
-          chmod +x release-assets/glrc-en-linux release-assets/glrc-id-linux
+          arch=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
+          cp dist/glrc-en "release-assets/glrc-en-linux-$arch"
+          cp dist/glrc-id "release-assets/glrc-id-linux-$arch"
+          chmod +x "release-assets/glrc-en-linux-$arch" "release-assets/glrc-id-linux-$arch"
 
       - name: Prepare macOS release assets
         if: runner.os == 'macOS'
         run: |
           mkdir -p release-assets
-          cp dist/glrc-en release-assets/glrc-en-macos
-          cp dist/glrc-id release-assets/glrc-id-macos
-          chmod +x release-assets/glrc-en-macos release-assets/glrc-id-macos
+          arch=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
+          cp dist/glrc-en "release-assets/glrc-en-macos-$arch"
+          cp dist/glrc-id "release-assets/glrc-id-macos-$arch"
+          chmod +x "release-assets/glrc-en-macos-$arch" "release-assets/glrc-id-macos-$arch"
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -116,14 +119,11 @@ jobs:
             ## GLRC v1.0.0 Highlights
             - Multi-language desktop binaries: EN and ID
             - Cross-platform release assets for Windows, macOS, and Linux
-            - Direct executable attachments (no zip/tar wrappers)
-            - Unified build pipeline with VERSION-driven app metadata
-            - Automatic icon generation (multi-size) and build asset bundling
-            - UI/UX improvements: dialogs, pagination, profile token duration updates
+            - Naming scheme: glrc-<lang>-<platform>-<arch>
           files: |
-            release-assets/glrc-en-windows.exe
-            release-assets/glrc-id-windows.exe
-            release-assets/glrc-en-linux
-            release-assets/glrc-id-linux
-            release-assets/glrc-en-macos
-            release-assets/glrc-id-macos
+            release-assets/glrc-en-windows-*.exe
+            release-assets/glrc-id-windows-*.exe
+            release-assets/glrc-en-linux-*
+            release-assets/glrc-id-linux-*
+            release-assets/glrc-en-macos-*
+            release-assets/glrc-id-macos-*
