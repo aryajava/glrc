@@ -15,14 +15,14 @@ LANG_TARGETS = {
 ASSET_FILES = [
     "VERSION",
     "default_lang.txt",
-    "logo.png",
-    "logo.ico",
-    "MaterialIcons-Regular.ttf",
-    "OpenSans-Regular.ttf",
-    "OpenSans-Bold.ttf",
-    "OpenSans-Italic.ttf",
-    "OpenSans-Light.ttf",
-    "OpenSans-Medium.ttf",
+    "assets/icons/logo.png",
+    "assets/icons/logo.ico",
+    "assets/fonts/MaterialIcons-Regular.ttf",
+    "assets/fonts/OpenSans-Regular.ttf",
+    "assets/fonts/OpenSans-Bold.ttf",
+    "assets/fonts/OpenSans-Italic.ttf",
+    "assets/fonts/OpenSans-Light.ttf",
+    "assets/fonts/OpenSans-Medium.ttf",
 ]
 
 APP_VERSION_FALLBACK = "1.0.0"
@@ -123,9 +123,9 @@ def generate_icon(repo_root: Path) -> None:
             sys.executable,
             "scripts/generate_icon.py",
             "--source",
-            "logo.png",
+            "assets/icons/logo.png",
             "--target",
-            "logo.ico",
+            "assets/icons/logo.ico",
             "--sizes",
             "16,24,32,48,64,128,256",
         ],
@@ -136,11 +136,11 @@ def generate_icon(repo_root: Path) -> None:
 def pick_icon_file(repo_root: Path) -> Path | None:
     system = platform.system().lower()
     if system == "darwin":
-        icns = repo_root / "logo.icns"
+        icns = repo_root / "assets" / "icons" / "logo.icns"
         if icns.exists():
             return icns
 
-    ico = repo_root / "logo.ico"
+    ico = repo_root / "assets" / "icons" / "logo.ico"
     if ico.exists():
         return ico
     return None
@@ -237,7 +237,8 @@ def build_one(repo_root: Path, lang: str, app_name: str) -> None:
     for asset in ASSET_FILES:
         asset_path = repo_root / asset
         if asset_path.exists():
-            cmd.extend(["--add-data", f"{asset}{data_sep}."])
+            destination = str(Path(asset).parent).replace("\\", "/")
+            cmd.extend(["--add-data", f"{asset}{data_sep}{destination}"])
 
     cmd.append("main.py")
 

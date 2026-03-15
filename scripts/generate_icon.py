@@ -64,8 +64,8 @@ if __name__ == "__main__":
             "and stripped metadata."
         )
     )
-    parser.add_argument("--source", default="logo.png", help="Source image path")
-    parser.add_argument("--target", default="logo.ico", help="Target .ico path")
+    parser.add_argument("--source", default="assets/icons/logo.png", help="Source image path")
+    parser.add_argument("--target", default="assets/icons/logo.ico", help="Target .ico path")
     parser.add_argument(
         "--sizes",
         default=",".join(str(s) for s in DEFAULT_SIZES),

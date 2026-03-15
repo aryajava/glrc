@@ -60,27 +60,24 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path release-assets | Out-Null
-          $arch = "${{ runner.arch }}".ToLower()
-          Copy-Item dist/glrc-en.exe "release-assets/glrc-en-windows-$arch.exe" -Force
-          Copy-Item dist/glrc-id.exe "release-assets/glrc-id-windows-$arch.exe" -Force
+          Copy-Item dist/glrc-en.exe "release-assets/glrc-en-windows.exe" -Force
+          Copy-Item dist/glrc-id.exe "release-assets/glrc-id-windows.exe" -Force
 
       - name: Prepare Linux release assets
         if: runner.os == 'Linux'
         run: |
           mkdir -p release-assets
-          arch=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
-          cp dist/glrc-en "release-assets/glrc-en-linux-$arch"
-          cp dist/glrc-id "release-assets/glrc-id-linux-$arch"
-          chmod +x "release-assets/glrc-en-linux-$arch" "release-assets/glrc-id-linux-$arch"
+          cp dist/glrc-en "release-assets/glrc-en-linux"
+          cp dist/glrc-id "release-assets/glrc-id-linux"
+          chmod +x "release-assets/glrc-en-linux" "release-assets/glrc-id-linux"
 
       - name: Prepare macOS release assets
         if: runner.os == 'macOS'
         run: |
           mkdir -p release-assets
-          arch=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
-          cp dist/glrc-en "release-assets/glrc-en-macos-$arch"
-          cp dist/glrc-id "release-assets/glrc-id-macos-$arch"
-          chmod +x "release-assets/glrc-en-macos-$arch" "release-assets/glrc-id-macos-$arch"
+          cp dist/glrc-en "release-assets/glrc-en-macos"
+          cp dist/glrc-id "release-assets/glrc-id-macos"
+          chmod +x "release-assets/glrc-en-macos" "release-assets/glrc-id-macos"
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -109,21 +106,45 @@ jobs:
             echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Remove old release assets
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const tag = '${{ steps.tag.outputs.value }}';
+
+            let release;
+            try {
+              const resp = await github.rest.repos.getReleaseByTag({ owner, repo, tag });
+              release = resp.data;
+            } catch (err) {
+              core.info(`No existing release for tag ${tag}; skipping asset cleanup.`);
+              return;
+            }
+
+            for (const asset of release.assets) {
+              core.info(`Deleting asset: ${asset.name}`);
+              await github.rest.repos.deleteReleaseAsset({
+                owner,
+                repo,
+                asset_id: asset.id,
+              });
+            }
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.value }}
           name: ${{ steps.tag.outputs.value }}
-          generate_release_notes: true
+          generate_release_notes: false
           body: |
-            ## GLRC v1.0.0 Highlights
             - Multi-language desktop binaries: EN and ID
             - Cross-platform release assets for Windows, macOS, and Linux
-            - Naming scheme: glrc-<lang>-<platform>-<arch>
           files: |
-            release-assets/glrc-en-windows-*.exe
-            release-assets/glrc-id-windows-*.exe
-            release-assets/glrc-en-linux-*
-            release-assets/glrc-id-linux-*
-            release-assets/glrc-en-macos-*
-            release-assets/glrc-id-macos-*
+            release-assets/glrc-en-windows.exe
+            release-assets/glrc-id-windows.exe
+            release-assets/glrc-en-linux
+            release-assets/glrc-id-linux
+            release-assets/glrc-en-macos
+            release-assets/glrc-id-macos

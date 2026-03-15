@@ -20,8 +20,14 @@ ENV/
 
 # Sensitive Configuration data
 config.dat
+default_lang.txt
 
 # Keep required UI assets tracked (fonts + logos are part of distributable build)
+
+# Local temporary/downloaded files
+favicon_io.zip
+glrc_logo_*.png
+logo (1).ico
 
 # IDE / OS specific files
 .vscode/

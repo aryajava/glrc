@@ -48,7 +48,7 @@ class GLRCApp(ctk.CTk):
 
         # Load Material Icons Font
         try:
-            font_path = os.path.join(self.base_dir, "MaterialIcons-Regular.ttf")
+            font_path = os.path.join(self.base_dir, "assets", "fonts", "MaterialIcons-Regular.ttf")
             ctk.FontManager.load_font(font_path)
             self.icon_font = ctk.CTkFont(family="Material Icons", size=22)
         except Exception as e:
@@ -57,11 +57,11 @@ class GLRCApp(ctk.CTk):
         # Load Open Sans Font
         try:
             self.opensans_files = {
-                "regular": "OpenSans-Regular.ttf",
-                "bold": "OpenSans-Bold.ttf",
-                "italic": "OpenSans-Italic.ttf",
-                "light": "OpenSans-Light.ttf",
-                "medium": "OpenSans-Medium.ttf",
+                "regular": os.path.join("assets", "fonts", "OpenSans-Regular.ttf"),
+                "bold": os.path.join("assets", "fonts", "OpenSans-Bold.ttf"),
+                "italic": os.path.join("assets", "fonts", "OpenSans-Italic.ttf"),
+                "light": os.path.join("assets", "fonts", "OpenSans-Light.ttf"),
+                "medium": os.path.join("assets", "fonts", "OpenSans-Medium.ttf"),
             }
             for font_file in self.opensans_files.values():
                 font_path = os.path.join(self.base_dir, font_file)
@@ -76,7 +76,7 @@ class GLRCApp(ctk.CTk):
 
         # Load Logo Image
         try:
-            logo_path = os.path.join(self.base_dir, "logo.png")
+            logo_path = os.path.join(self.base_dir, "assets", "icons", "logo.png")
             self.logo_img = ctk.CTkImage(light_image=Image.open(logo_path), dark_image=Image.open(logo_path), size=(28, 28))
             self.logo_img_large = ctk.CTkImage(light_image=Image.open(logo_path), dark_image=Image.open(logo_path), size=(48, 48))
         except Exception:
@@ -84,13 +84,13 @@ class GLRCApp(ctk.CTk):
             self.logo_img_large = None
 
         try:
-            self.ico_path = os.path.join(self.base_dir, "logo.ico")
+            self.ico_path = os.path.join(self.base_dir, "assets", "icons", "logo.ico")
             self.iconbitmap(self.ico_path)
         except Exception:
             self.ico_path = None
 
         try:
-            png_path = os.path.join(self.base_dir, "logo.png")
+            png_path = os.path.join(self.base_dir, "assets", "icons", "logo.png")
             if os.path.exists(png_path):
                 self.img_icon = tk.PhotoImage(file=png_path)
                 self.iconphoto(True, self.img_icon)
