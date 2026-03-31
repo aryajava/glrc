@@ -96,6 +96,9 @@ jobs:
           path: release-assets
           merge-multiple: true
 
+      - name: List downloaded artifacts (debug)
+        run: find release-assets/ -type f | sort
+
       - name: Resolve tag
         id: tag
         shell: bash
@@ -155,10 +158,6 @@ jobs:
           name: ${{ steps.tag.outputs.value }}
           generate_release_notes: false
           body: ${{ steps.changelog.outputs.body }}
+          fail_on_unmatched_files: true
           files: |
-            release-assets/glrc-en-windows.exe
-            release-assets/glrc-id-windows.exe
-            release-assets/glrc-en-linux
-            release-assets/glrc-id-linux
-            release-assets/glrc-en-macos
-            release-assets/glrc-id-macos
+            release-assets/glrc-*
