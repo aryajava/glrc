@@ -90,6 +90,32 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     steps:
+      - name: Resolve tag
+        id: tag
+        shell: bash
+        run: |
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "value=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Checkout source (for changelog)
+        uses: actions/checkout@v4
+
+      - name: Extract changelog for release body
+        id: changelog
+        shell: bash
+        run: |
+          TAG="${{ steps.tag.outputs.value }}"
+          VER="${TAG#v}"
+          # Extract the section for this version from CHANGELOG.md
+          BODY=$(awk "/^## version ${VER}$/,/^=+$/" CHANGELOG.md | head -n -1)
+          # Use GitHub Actions delimiter for multiline output
+          echo "body<<CHANGELOG_EOF" >> "$GITHUB_OUTPUT"
+          echo "$BODY" >> "$GITHUB_OUTPUT"
+          echo "CHANGELOG_EOF" >> "$GITHUB_OUTPUT"
+
       - name: Download Windows artifacts
         uses: actions/download-artifact@v4
         with:
@@ -122,16 +148,6 @@ jobs:
             fi
           done
 
-      - name: Resolve tag
-        id: tag
-        shell: bash
-        run: |
-          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            echo "value=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "value=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Remove old release assets
         uses: actions/github-script@v7
         with:
@@ -157,22 +173,6 @@ jobs:
                 asset_id: asset.id,
               });
             }
-
-      - name: Checkout source (for changelog)
-        uses: actions/checkout@v4
-
-      - name: Extract changelog for release body
-        id: changelog
-        shell: bash
-        run: |
-          TAG="${{ steps.tag.outputs.value }}"
-          VER="${TAG#v}"
-          # Extract the section for this version from CHANGELOG.md
-          BODY=$(awk "/^## version ${VER}$/,/^=+$/" CHANGELOG.md | head -n -1)
-          # Use GitHub Actions delimiter for multiline output
-          echo "body<<CHANGELOG_EOF" >> "$GITHUB_OUTPUT"
-          echo "$BODY" >> "$GITHUB_OUTPUT"
-          echo "CHANGELOG_EOF" >> "$GITHUB_OUTPUT"
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
