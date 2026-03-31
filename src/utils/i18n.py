@@ -121,6 +121,12 @@ _translations = {
         "ws_imported": "Workspace imported! Checked {count} repositories.",
         "ws_import_err": "Failed to parse Workspace JSON file.",
         
+        # Open in IDE
+        "open_in_ide_title": "Open in IDE:",
+        "open_ide_btn": "Open",
+        "open_ide_failed": "Failed to open {ide}:\n{error}",
+        "open_in_explorer": "File Explorer",
+        
         # UI Updates
         "app_name": "GLRC: GitLab Repo Cloner",
         "pulling": "[>] Repo exists. Pulling latest code...",
@@ -242,6 +248,12 @@ _translations = {
         "ws_exported": "Workspace berhasil diekspor ke {file}",
         "ws_imported": "Workspace diimpor! {count} repositori diceklis.",
         "ws_import_err": "Gagal membaca file JSON Workspace.",
+        
+        # Open in IDE
+        "open_in_ide_title": "Buka di IDE:",
+        "open_ide_btn": "Buka",
+        "open_ide_failed": "Gagal membuka {ide}:\n{error}",
+        "open_in_explorer": "File Explorer",
         
         # UI Updates
         "app_name": "GLRC: GitLab Repo Cloner",

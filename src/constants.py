@@ -16,6 +16,7 @@ ICON_IMPORT = "\ue2c8"
 ICON_CHECK_ALL = "\ue86c"
 ICON_UNCHECK_ALL = "\ue835"
 ICON_LOGS = "\ue86f"
+ICON_OPEN_IN_NEW = "\ue89f"
 
 # Window Dimensions
 DEFAULT_LOGIN_WIDTH = 720

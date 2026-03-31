@@ -11,7 +11,7 @@ import os
 import sys
 import json
 from datetime import datetime, timedelta
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 
 # Import dari struktur baru
 from src.core.config_manager import ConfigManager
@@ -24,7 +24,7 @@ from src.utils.dialogs import show_custom_message, show_info, show_warning, show
 from src.constants import (
     ICON_SETTINGS, ICON_INFO, ICON_LOGOUT, ICON_USER, ICON_VISIBILITY,
     ICON_VISIBILITY_OFF, ICON_SEARCH, ICON_RESET,
-    ICON_EXPORT, ICON_IMPORT, ICON_CHECK_ALL, ICON_UNCHECK_ALL, ICON_LOGS,
+    ICON_EXPORT, ICON_IMPORT, ICON_CHECK_ALL, ICON_UNCHECK_ALL, ICON_LOGS, ICON_OPEN_IN_NEW,
     DEFAULT_LOGIN_WIDTH, DEFAULT_LOGIN_HEIGHT, DEFAULT_EXPANDED_WIDTH,
     DEFAULT_EXPANDED_HEIGHT, DEFAULT_PER_PAGE
 )
@@ -51,8 +51,27 @@ class GLRCApp(ctk.CTk):
             font_path = os.path.join(self.base_dir, "assets", "fonts", "MaterialIcons-Regular.ttf")
             ctk.FontManager.load_font(font_path)
             self.icon_font = ctk.CTkFont(family="Material Icons", size=22)
+            # Render Material Icons glyphs to CTkImage for use in buttons with text
+            self._pil_icon_font = ImageFont.truetype(font_path, 20)
+            self.icon_search_img = self._render_icon(ICON_SEARCH)
+            self.icon_reset_img = self._render_icon(ICON_RESET)
+            self.icon_export_img = self._render_icon(ICON_EXPORT)
+            self.icon_import_img = self._render_icon(ICON_IMPORT)
+            self.icon_check_all_img = self._render_icon(ICON_CHECK_ALL)
+            self.icon_uncheck_all_img = self._render_icon(ICON_UNCHECK_ALL)
+            self.icon_logs_img = self._render_icon(ICON_LOGS)
+            self.open_in_new_img = self._render_icon(ICON_OPEN_IN_NEW)
         except Exception as e:
             self.icon_font = None
+            self._pil_icon_font = None
+            self.icon_search_img = None
+            self.icon_reset_img = None
+            self.icon_export_img = None
+            self.icon_import_img = None
+            self.icon_check_all_img = None
+            self.icon_uncheck_all_img = None
+            self.icon_logs_img = None
+            self.open_in_new_img = None
 
         # Load Open Sans Font
         try:
@@ -139,6 +158,13 @@ class GLRCApp(ctk.CTk):
         self.login_frame.pack(fill="both", expand=True)
         self.check_saved_token()
 
+    def _render_icon(self, glyph, size=24, render_size=20):
+        """Render a Material Icons glyph to CTkImage."""
+        img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+        draw.text((size / 2, size / 2), glyph, fill="white", font=self._pil_icon_font, anchor="mm")
+        return ctk.CTkImage(light_image=img, dark_image=img, size=(render_size, render_size))
+
     def load_app_version(self):
         version_path = os.path.join(self.base_dir, "VERSION")
         try:
@@ -158,6 +184,17 @@ class GLRCApp(ctk.CTk):
             self.token_entry.insert(0, saved_pat)
             self.save_pat_var.set(True)
             self.pat_days_entry.configure(state="normal")
+
+            # Show actual remaining days in the entry
+            saved_info = self.config.get_saved_pat()
+            if saved_info and saved_info.get("expiry_date"):
+                try:
+                    exp_dt = datetime.fromisoformat(saved_info["expiry_date"])
+                    days_rem = (exp_dt - datetime.now()).days
+                    self.pat_days_entry.delete(0, tk.END)
+                    self.pat_days_entry.insert(0, "0" if days_rem > 3650 else str(max(days_rem, 1)))
+                except Exception:
+                    pass
             
             # Otomatis login (opsional) - di sini hanya mengisi field saja
             # Supaya pengguna tahu, kita beri info ringan
@@ -186,6 +223,8 @@ class GLRCApp(ctk.CTk):
             pass
 
     def configure_modal_window(self, modal, width, height, on_escape=None, use_grab=True):
+        modal.withdraw()  # Hide while configuring
+
         modal.geometry(f"{width}x{height}")
         modal.resizable(False, False)
         modal.transient(self)
@@ -195,7 +234,13 @@ class GLRCApp(ctk.CTk):
         modal.protocol("WM_DELETE_WINDOW", close_action)
         modal.bind("<Escape>", lambda event: close_action())
 
+        # Apply icon before showing — no visible flicker
+        self.apply_window_icon(modal)
+
+        modal.deiconify()  # Show fully configured window
         self.activate_window(modal)
+        # Single backup for CTkToplevel internal callbacks (~150ms)
+        modal.after(200, lambda: self.apply_window_icon(modal))
         if use_grab:
             modal.grab_set()
 
@@ -205,22 +250,31 @@ class GLRCApp(ctk.CTk):
         self.update_idletasks()
         center_window(self, self.login_w, self.login_h)
 
+    def _set_btn_state(self, btn, state):
+        """Only call .configure() if state actually changed – avoids CTkButton _draw() jitter."""
+        try:
+            if str(btn.cget("state")) != state:
+                btn.configure(state=state)
+        except Exception:
+            btn.configure(state=state)
+
     def update_selection_action_buttons(self):
         has_repos = bool(self.repo_items)
         has_selection = bool(self.selected_repos)
 
-        self.btn_select_all.configure(state="normal" if has_repos else "disabled")
-        self.btn_deselect_all.configure(state="normal" if has_repos else "disabled")
-        self.btn_export.configure(state="normal" if has_selection else "disabled")
+        self._set_btn_state(self.btn_select_all, "normal" if has_repos else "disabled")
+        self._set_btn_state(self.btn_deselect_all, "normal" if has_repos else "disabled")
+        self._set_btn_state(self.btn_export, "normal" if has_selection else "disabled")
 
     def update_repo_range_label(self, displayed_count):
         if self.total_rows <= 0 or displayed_count <= 0:
-            self.page_label.configure(text=f"0-0 of {self.total_rows} repos")
+            self.page_label.configure(text=_("page").format(start=0, end=0, total=self.total_rows))
             return
 
         start_row = ((self.current_page - 1) * self.per_page) + 1
         end_row = start_row + displayed_count - 1
-        self.page_label.configure(text=f"{start_row}-{end_row} of {self.total_rows} repos")
+        self.page_label.configure(text=_("page").format(start=start_row, end=end_row, total=self.total_rows))
+
 
     # =========================================================================
     # LOGIN FRAME
@@ -268,15 +322,15 @@ class GLRCApp(ctk.CTk):
         token_frame = ctk.CTkFrame(form, fg_color="transparent")
         token_frame.pack(fill="x", pady=(2, 10))
         
-        self.token_entry = ctk.CTkEntry(token_frame, width=330, height=38, show="*", placeholder_text="glpat-xxxxxxxxxxxx")
+        self.token_entry = ctk.CTkEntry(token_frame, width=330, height=34, show="*", placeholder_text="glpat-xxxxxxxxxxxx")
         self.token_entry.pack(side="left", expand=True, fill="x")
         
         self.show_pwd_btn = ctk.CTkButton(
             token_frame,
             text=ICON_VISIBILITY if getattr(self, "icon_font", None) else "👁",
             font=getattr(self, "icon_font", None),
-            width=38,
-            height=38,
+            width=34,
+            height=34,
             fg_color="gray40",
             hover_color="gray30",
             command=self.toggle_pat_visibility,
@@ -299,21 +353,28 @@ class GLRCApp(ctk.CTk):
         
         ctk.CTkLabel(pat_opt_frame, text=_("duration")).pack(side="left", padx=(15, 5))
         
+        # disable input hari jika checkbox tidak dicentang, enable jika dicentang. Default 7 hari.
         self.pat_days_entry = ctk.CTkEntry(pat_opt_frame, width=50, height=28)
         self.pat_days_entry.insert(0, "7")
         self.pat_days_entry.configure(state="disabled")
         self.pat_days_entry.pack(side="left")
         ToolTip(self.pat_days_entry, _("pat_days_tooltip"))
         
+        # self.pat_days_entry = ctk.CTkEntry(pat_opt_frame, width=50, height=28)
+        # self.pat_days_entry.insert(0, "7")
+        # self.pat_days_entry.configure(state="disabled")
+        # self.pat_days_entry.pack(side="left")
+        # ToolTip(self.pat_days_entry, _("pat_days_tooltip"))
+        
         ctk.CTkLabel(pat_opt_frame, text=_("days")).pack(side="left", padx=(5, 0))
 
         self.connect_btn = ctk.CTkButton(
             form, text=_("connect_btn"),
-            width=380, height=42,
+            height=44,
             font=ctk.CTkFont(family="Open Sans Medium", size=14, weight="bold"),
             command=self.start_auth_thread
         )
-        self.connect_btn.pack()
+        self.connect_btn.pack(fill="x")
 
     def toggle_pat_visibility(self):
         self.is_pat_visible = not self.is_pat_visible
@@ -372,27 +433,27 @@ class GLRCApp(ctk.CTk):
         top_btn_frame.pack(side="right", padx=(5, 0))
 
         # Buttons
-        logout_btn = ctk.CTkButton(top_btn_frame, text=ICON_LOGOUT if getattr(self, "icon_font", None) else "Log Out", font=getattr(self, "icon_font", None), width=36, height=36, fg_color="#c0392b", hover_color="#922b21", command=self.logout)
-        logout_btn.pack(side="right", padx=(8, 0))
+        logout_btn = ctk.CTkButton(top_btn_frame, text=ICON_LOGOUT if getattr(self, "icon_font", None) else "Log Out", font=getattr(self, "icon_font", None), width=34, height=34, fg_color="#c0392b", hover_color="#922b21", command=self.logout)
+        logout_btn.pack(side="right", padx=(6, 0))
         ToolTip(logout_btn, _("tooltip_logout"))
         
-        set_btn = ctk.CTkButton(top_btn_frame, text=ICON_SETTINGS if getattr(self, "icon_font", None) else "⚙", font=getattr(self, "icon_font", None), width=36, height=36, command=self.open_settings_modal)
-        set_btn.pack(side="right", padx=(8, 0))
+        set_btn = ctk.CTkButton(top_btn_frame, text=ICON_SETTINGS if getattr(self, "icon_font", None) else "⚙", font=getattr(self, "icon_font", None), width=34, height=34, command=self.open_settings_modal)
+        set_btn.pack(side="right", padx=(6, 0))
         ToolTip(set_btn, _("tooltip_settings"))
         
-        info_btn = ctk.CTkButton(top_btn_frame, text=ICON_INFO if getattr(self, "icon_font", None) else "ℹ", font=getattr(self, "icon_font", None), width=36, height=36, command=self.open_about_modal)
-        info_btn.pack(side="right", padx=(8, 0))
+        info_btn = ctk.CTkButton(top_btn_frame, text=ICON_INFO if getattr(self, "icon_font", None) else "ℹ", font=getattr(self, "icon_font", None), width=34, height=34, command=self.open_about_modal)
+        info_btn.pack(side="right", padx=(6, 0))
         ToolTip(info_btn, _("tooltip_about"))
 
         self.user_info_btn = ctk.CTkButton(
             top_btn_frame,
             text=ICON_USER if getattr(self, "icon_font", None) else "👤",
             font=getattr(self, "icon_font", None),
-            width=36,
-            height=36,
+            width=34,
+            height=34,
             command=self.open_profile_modal
         )
-        self.user_info_btn.pack(side="right", padx=(8, 0))
+        self.user_info_btn.pack(side="right", padx=(6, 0))
         ToolTip(self.user_info_btn, _("tooltip_profile"))
 
         ctk.CTkFrame(self.main_frame, height=2, fg_color="gray30").pack(fill="x", padx=20, pady=(4, 8))
@@ -412,7 +473,7 @@ class GLRCApp(ctk.CTk):
         dest_frame.pack(fill="x", pady=(5, 5), padx=10)
 
         ctk.CTkLabel(dest_frame, text=_("path_label"), font=ctk.CTkFont(family="Open Sans", weight="bold")).pack(side="left", padx=(0, 10))
-        self.dest_entry = ctk.CTkEntry(dest_frame, height=34, placeholder_text=_("dest_placeholder"))
+        self.dest_entry = ctk.CTkEntry(dest_frame, height=32, placeholder_text=_("dest_placeholder"))
         
         # Load prev dest
         saved_dest = self.config.get_dest_folder()
@@ -420,7 +481,7 @@ class GLRCApp(ctk.CTk):
             self.dest_entry.insert(0, saved_dest)
             
         self.dest_entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
-        ctk.CTkButton(dest_frame, text=_("browse_folder"), width=110, height=34, command=self.browse_folder).pack(side="left")
+        ctk.CTkButton(dest_frame, text=_("browse_folder"), width=100, height=32, font=ctk.CTkFont(family="Open Sans"), command=self.browse_folder).pack(side="left")
 
         # === STEP 2: Tools: Search + Select ===
         step2_frame = ctk.CTkFrame(self.main_frame, border_width=1, border_color="gray50")
@@ -432,21 +493,22 @@ class GLRCApp(ctk.CTk):
         tools_frame.pack(fill="x", padx=10, pady=(0, 6))
 
         # Search group
-        self.search_entry = ctk.CTkEntry(tools_frame, height=34, placeholder_text=_("search_placeholder"))
+        self.search_entry = ctk.CTkEntry(tools_frame, height=32, placeholder_text=_("search_placeholder"))
         self.search_entry.pack(side="left", fill="x", expand=True, padx=(0, 6))
         self.search_entry.bind("<Return>", self.trigger_search)
 
-        self.search_btn = ctk.CTkButton(tools_frame, text="🔍 " + _("search_btn"), font=ctk.CTkFont(family="Open Sans"), width=80, height=34, command=self.trigger_search)
+        self.search_btn = ctk.CTkButton(tools_frame, text=_("search_btn"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_search_img, compound="left", command=self.trigger_search)
         self.search_btn.pack(side="left", padx=(0, 6))
 
         ToolTip(self.search_entry, _("search_placeholder"))
 
         self.reset_search_btn = ctk.CTkButton(
-            tools_frame, text="✕ " + _("reset_btn"), font=ctk.CTkFont(family="Open Sans"), width=80, height=34,
+            tools_frame, text=_("reset_btn"), font=ctk.CTkFont(family="Open Sans"), height=32,
+            image=self.icon_reset_img, compound="left",
             fg_color="gray40", hover_color="gray30",
             command=self.reset_search
         )
-        self.reset_search_btn.pack(side="left", padx=(0, 0))
+        self.reset_search_btn.pack(side="left")
 
         # Add trace to disable/enable search buttons
         self.search_var = ctk.StringVar()
@@ -462,17 +524,17 @@ class GLRCApp(ctk.CTk):
         action_frame = ctk.CTkFrame(step2_frame, fg_color="transparent")
         action_frame.pack(fill="x", padx=10, pady=(6, 6))
 
-        self.btn_select_all = ctk.CTkButton(action_frame, text="☑ " + _("select_all"), font=ctk.CTkFont(family="Open Sans"), width=140, height=34, command=self.select_all)
-        self.btn_select_all.pack(side="left", padx=(0, 8))
+        self.btn_select_all = ctk.CTkButton(action_frame, text=_("select_all"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_check_all_img, compound="left", command=self.select_all)
+        self.btn_select_all.pack(side="left", padx=(0, 6))
 
-        self.btn_deselect_all = ctk.CTkButton(action_frame, text="☐ " + _("deselect_all"), font=ctk.CTkFont(family="Open Sans"), width=140, height=34, fg_color="gray40", hover_color="gray30", command=self.deselect_all)
+        self.btn_deselect_all = ctk.CTkButton(action_frame, text=_("deselect_all"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_uncheck_all_img, compound="left", fg_color="gray40", hover_color="gray30", command=self.deselect_all)
         self.btn_deselect_all.pack(side="left")
 
-        self.btn_import = ctk.CTkButton(action_frame, text="📂 " + _("import_ws"), font=ctk.CTkFont(family="Open Sans"), width=140, height=34, fg_color="#2980b9", hover_color="#1f618d", command=self.import_workspace)
+        self.btn_import = ctk.CTkButton(action_frame, text=_("import_ws"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_import_img, compound="left", fg_color="#2980b9", hover_color="#1f618d", command=self.import_workspace)
         self.btn_import.pack(side="right")
 
-        self.btn_export = ctk.CTkButton(action_frame, text="💾 " + _("export_ws"), font=ctk.CTkFont(family="Open Sans"), width=140, height=34, fg_color="#2980b9", hover_color="#1f618d", command=self.export_workspace)
-        self.btn_export.pack(side="right", padx=(0, 8))
+        self.btn_export = ctk.CTkButton(action_frame, text=_("export_ws"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_export_img, compound="left", fg_color="#2980b9", hover_color="#1f618d", command=self.export_workspace)
+        self.btn_export.pack(side="right", padx=(0, 6))
 
         # --- Scrollable List Repo ---
         self.scroll_frame = ctk.CTkScrollableFrame(
@@ -505,23 +567,23 @@ class GLRCApp(ctk.CTk):
         right_pag = ctk.CTkFrame(self.pagination_frame, fg_color="transparent")
         right_pag.pack(side="right")
         
-        self.first_btn = ctk.CTkButton(right_pag, text="<<", width=36, height=32, command=self.first_page, state="disabled")
+        self.first_btn = ctk.CTkButton(right_pag, text="<<", width=34, height=30, font=ctk.CTkFont(family="Open Sans", size=12), command=self.first_page, state="disabled")
         self.first_btn.pack(side="left", padx=(0, 4))
 
-        self.prev_btn = ctk.CTkButton(right_pag, text="<", width=36, height=32, command=self.prev_page, state="disabled")
+        self.prev_btn = ctk.CTkButton(right_pag, text="<", width=34, height=30, font=ctk.CTkFont(family="Open Sans", size=12), command=self.prev_page, state="disabled")
         self.prev_btn.pack(side="left", padx=(0, 10))
         
-        self.goto_page_entry = ctk.CTkEntry(right_pag, width=40, height=32, justify="center")
+        self.goto_page_entry = ctk.CTkEntry(right_pag, width=40, height=30, justify="center")
         self.goto_page_entry.pack(side="left", padx=(0, 5))
         self.goto_page_entry.bind("<Return>", self.goto_page)
         
         self.total_page_label = ctk.CTkLabel(right_pag, text="/ 1")
         self.total_page_label.pack(side="left", padx=(0, 10))
 
-        self.next_btn = ctk.CTkButton(right_pag, text=">", width=36, height=32, command=self.next_page, state="disabled")
+        self.next_btn = ctk.CTkButton(right_pag, text=">", width=34, height=30, font=ctk.CTkFont(family="Open Sans", size=12), command=self.next_page, state="disabled")
         self.next_btn.pack(side="left", padx=(0, 4))
         
-        self.last_btn = ctk.CTkButton(right_pag, text=">>", width=36, height=32, command=self.last_page, state="disabled")
+        self.last_btn = ctk.CTkButton(right_pag, text=">>", width=34, height=30, font=ctk.CTkFont(family="Open Sans", size=12), command=self.last_page, state="disabled")
         self.last_btn.pack(side="left")
 
         # === STEP 3: Tombol Clone ===
@@ -533,7 +595,7 @@ class GLRCApp(ctk.CTk):
             text=_("step3_btn"),
             fg_color="#1a7f37", hover_color="#15692f",
             font=ctk.CTkFont(family="Open Sans Medium", size=14, weight="bold"),
-            height=46,
+            height=44,
             command=self.open_branch_selection_modal
         )
         self.clone_btn.pack(fill="x")
@@ -542,8 +604,8 @@ class GLRCApp(ctk.CTk):
         log_header = ctk.CTkFrame(self.main_frame, fg_color="transparent")
         log_header.pack(fill="x", padx=20, pady=(0, 16))
         ctk.CTkButton(
-            log_header, text="📄 " + _("show_logs"), font=ctk.CTkFont(family="Open Sans"), command=self.show_log_modal,
-            fg_color="gray40", hover_color="gray30"
+            log_header, text=_("show_logs"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_logs_img, compound="left",
+            command=self.show_log_modal, fg_color="gray40", hover_color="gray30"
         ).pack(side="left")
 
         # Create hidden log window
@@ -609,9 +671,8 @@ class GLRCApp(ctk.CTk):
     def validate_search_input(self, *args):
         try:
             val = self.search_var.get().strip()
-            self.search_btn.configure(state="normal" if val and not self.is_fetching else "disabled")
-            # Reset acts as refresh and clear selection, keep enabled when not fetching.
-            self.reset_search_btn.configure(state="normal" if not self.is_fetching else "disabled")
+            self._set_btn_state(self.search_btn, "normal" if val and not self.is_fetching else "disabled")
+            self._set_btn_state(self.reset_search_btn, "normal" if not self.is_fetching else "disabled")
         except Exception:
             pass
             
@@ -694,16 +755,16 @@ class GLRCApp(ctk.CTk):
     def set_ui_loading_state(self, is_loading):
         self.is_fetching = is_loading
         state = "disabled" if is_loading else "normal"
-        self.search_btn.configure(state=state)
-        self.reset_search_btn.configure(state=state)
+        self._set_btn_state(self.search_btn, state)
+        self._set_btn_state(self.reset_search_btn, state)
         self.search_entry.configure(state=state)
         if is_loading:
             self.per_page_combo.configure(state="disabled")
             self.goto_page_entry.configure(state="disabled")
-            self.first_btn.configure(state="disabled")
-            self.prev_btn.configure(state="disabled")
-            self.next_btn.configure(state="disabled")
-            self.last_btn.configure(state="disabled")
+            self._set_btn_state(self.first_btn, "disabled")
+            self._set_btn_state(self.prev_btn, "disabled")
+            self._set_btn_state(self.next_btn, "disabled")
+            self._set_btn_state(self.last_btn, "disabled")
         else:
             self.validate_search_input()
         
@@ -719,19 +780,19 @@ class GLRCApp(ctk.CTk):
         self.goto_page_entry.insert(0, str(self.current_page))
 
         if is_searching or self.total_pages <= 1:
-            self.first_btn.configure(state="disabled")
-            self.prev_btn.configure(state="disabled")
-            self.next_btn.configure(state="disabled")
-            self.last_btn.configure(state="disabled")
+            self._set_btn_state(self.first_btn, "disabled")
+            self._set_btn_state(self.prev_btn, "disabled")
+            self._set_btn_state(self.next_btn, "disabled")
+            self._set_btn_state(self.last_btn, "disabled")
             if is_searching:
                 self.goto_page_entry.configure(state="disabled")
             return
 
-        self.first_btn.configure(state="normal" if self.current_page > 1 else "disabled")
-        self.prev_btn.configure(state="normal" if self.current_page > 1 else "disabled")
+        self._set_btn_state(self.first_btn, "normal" if self.current_page > 1 else "disabled")
+        self._set_btn_state(self.prev_btn, "normal" if self.current_page > 1 else "disabled")
         can_go_next = has_next and self.current_page < self.total_pages
-        self.next_btn.configure(state="normal" if can_go_next else "disabled")
-        self.last_btn.configure(state="normal" if self.current_page < self.total_pages else "disabled")
+        self._set_btn_state(self.next_btn, "normal" if can_go_next else "disabled")
+        self._set_btn_state(self.last_btn, "normal" if self.current_page < self.total_pages else "disabled")
 
     def load_page_data(self):
         self.set_ui_loading_state(True)
@@ -983,7 +1044,7 @@ class GLRCApp(ctk.CTk):
                 dur_lbl.configure(text=new_str)
                 show_custom_message(modal, "Info", _("duration_updated"), icon_type="success")
 
-        ctk.CTkButton(edit_frame, text=_("update"), width=80, command=save_dur, font=ctk.CTkFont(family="Open Sans")).pack(side="left", padx=(10, 0))
+        ctk.CTkButton(edit_frame, text=_("update"), width=80, height=32, command=save_dur, font=ctk.CTkFont(family="Open Sans")).pack(side="left", padx=(10, 0))
 
     def open_settings_modal(self):
         modal = ctk.CTkToplevel(self)
@@ -1022,7 +1083,7 @@ class GLRCApp(ctk.CTk):
             modal.destroy()
             show_info(self, _("ok"), _("settings_saved_restart"))
 
-        ctk.CTkButton(modal, text=_("save_settings"), height=40, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=save_settings).pack(pady=(10, 20))
+        ctk.CTkButton(modal, text=_("save_settings"), height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=save_settings).pack(pady=(10, 20))
 
     def open_about_modal(self):
         modal = ctk.CTkToplevel(self)
@@ -1062,7 +1123,7 @@ class GLRCApp(ctk.CTk):
         l3.bind("<Button-1>", lambda e: open_link("https://github.com/aryajava/glrc/releases"))
         l3.configure(cursor="hand2")
 
-        ctk.CTkButton(modal, text=_("ok"), width=120, height=38, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=modal.destroy).pack(pady=(20, 20))
+        ctk.CTkButton(modal, text=_("ok"), width=120, height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=modal.destroy).pack(pady=(20, 20))
 
     def show_log_modal(self):
         if self.log_window is None or not self.log_window.winfo_exists():
@@ -1097,8 +1158,15 @@ class GLRCApp(ctk.CTk):
         )
         if filepath:
             try:
+                # Only serialize plain data; skip Tkinter variable objects
+                clean_data = {}
+                for url, info in self.selected_repos.items():
+                    clean_data[url] = {
+                        "name": info.get("name", ""),
+                        "id": info.get("id", 0)
+                    }
                 with open(filepath, 'w') as f:
-                    json.dump(self.selected_repos, f, indent=4)
+                    json.dump(clean_data, f, indent=4)
                 show_info(self, _("ok"), _("ws_exported", file=filepath))
             except Exception as e:
                 show_error(self, _("error"), f"Failed: {e}")
@@ -1111,55 +1179,47 @@ class GLRCApp(ctk.CTk):
             try:
                 with open(filepath, 'r') as f:
                     data = json.load(f)
-                
+
+                if not isinstance(data, dict):
+                    show_error(self, _("error"), _("ws_import_err"))
+                    return
+
                 # Merge into selected_repos
                 count = 0
                 for url, info in data.items():
                     if url not in self.selected_repos:
-                        self.selected_repos[url] = info
+                        self.selected_repos[url] = {
+                            "name": info.get("name", ""),
+                            "id": info.get("id", 0)
+                        }
                         count += 1
-                
-                # For import workspace, filter view to ONLY those imported!
-                imported_ids = set([i.get("id", url) for url, i in data.items()])
-                
-                # We need to change the cached_projects to only imported ones temporarily or just filter them.
-                # Actually, the user asked: "hanya menampilkan repo yang ada di workspace dan hapus juga inpit text pencarian serta tidak ada pagination"
+
+                # Clear search input
                 self.search_entry.delete(0, tk.END)
-                if hasattr(self, 'validate_search_input'):
-                    self.validate_search_input()
-                
-                # Filter cached projects
-                self.filtered_projects = [p for p in self.cached_projects if p.get("web_url") in data or p.get("ssh_url_to_repo") in data or p.get("http_url_to_repo") in data]
-                if not self.filtered_projects:
-                    # If empty (maybe urls don't match because of api difference), try by ID if available
-                    data_ids = [d.get('id') for d in data.values() if d.get('id')]
-                    if data_ids:
-                        self.filtered_projects = [p for p in self.cached_projects if p.get('id') in data_ids]
-                
-                self.current_page = 1
-                self.total_rows = len(self.filtered_projects)
-                self.per_page = 10000 # No pagination
-                self.total_pages = 1
-                
-                self.update_repo_list_ui()
-                
-                # Now select them globally
+                self.validate_search_input()
+
+                # Build filtered list: match from cached_projects or create synthetic entries
+                cached_by_url = {p.get("http_url_to_repo"): p for p in self.cached_projects}
+                projects = []
                 for url, info in data.items():
-                    if url not in self.selected_repos:
-                        self.selected_repos[url] = info
+                    if url in cached_by_url:
+                        projects.append(cached_by_url[url])
+                    else:
+                        projects.append({
+                            "path_with_namespace": info.get("name", url.rstrip("/").split("/")[-1]),
+                            "http_url_to_repo": url,
+                            "id": info.get("id", 0),
+                        })
 
-                # Select in UI logically
-                for item in self.repo_items:
-                    if item["url"] in self.selected_repos:
-                        item["var"].set(item["url"])
-                        item["widget"].select()
-                        
-                if hasattr(self, 'validate_export_btn'):
-                    self.validate_export_btn()
+                # Use filtered_projects with normal pagination (don't override per_page)
+                self.filtered_projects = projects
+                self.current_page = 1
 
+                self.update_repo_list_ui()
                 self.update_selection_action_buttons()
-
                 show_info(self, _("ok"), _("ws_imported", count=count))
+            except json.JSONDecodeError:
+                show_error(self, _("error"), _("ws_import_err"))
             except Exception as e:
                 show_error(self, _("error"), _("ws_import_err") + f"\n{e}")
 
@@ -1216,8 +1276,8 @@ class GLRCApp(ctk.CTk):
                 return
 
         modal = ctk.CTkToplevel(self)
+        modal.title(_("modal_title"))
         self.configure_modal_window(modal, 820, 600)
-        modal.grab_set()
 
         # --- Header ---
         hdr_frame = ctk.CTkFrame(modal, fg_color="transparent")
@@ -1269,7 +1329,8 @@ class GLRCApp(ctk.CTk):
         footer.pack(fill="x", padx=20, pady=(0, 16))
 
         ctk.CTkButton(
-            footer, text=_("cancel"), width=100, fg_color="gray40", hover_color="gray30",
+            footer, text=_("cancel"), width=100, height=36, font=ctk.CTkFont(family="Open Sans"),
+            fg_color="gray40", hover_color="gray30",
             command=modal.destroy
         ).pack(side="left")
 
@@ -1277,7 +1338,7 @@ class GLRCApp(ctk.CTk):
             footer, text=_("start_clone"), state="disabled",
             fg_color="#1a7f37", hover_color="#15692f",
             font=ctk.CTkFont(family="Open Sans", size=13, weight="bold"),
-            width=160,
+            width=160, height=36,
             command=lambda: self.execute_clone_from_modal(modal)
         )
         action_btn.pack(side="right")
@@ -1438,6 +1499,7 @@ class GLRCApp(ctk.CTk):
     def run_multiple_clones(self, urls, dest_folder):
         self.sukses = 0
         self.gagal = 0
+        self.cloned_paths = []  # Track successfully cloned/updated repos
         self.lock = threading.Lock()
         
         clone_method = self.config.get_clone_method()
@@ -1453,12 +1515,8 @@ class GLRCApp(ctk.CTk):
         self.after(0, lambda: self.clone_btn.configure(
             state="normal", text=_("step3_btn")
         ))
-        self.after(0, lambda: show_custom_message(
-            self,
-            _("done_title"),
-            _("clone_done", success=self.sukses, failed=self.gagal),
-            icon_type="success"
-        ))
+        cloned = list(self.cloned_paths)
+        self.after(0, lambda: self.show_clone_result_dialog(cloned))
 
     def _process_single_repo(self, url, dest_folder, clone_method):
         repo_data = self.selected_repos[url]
@@ -1487,6 +1545,11 @@ class GLRCApp(ctk.CTk):
                 netloc=f"oauth2:{quote(self.api_token)}@{parsed.netloc}"
             ).geturl()
 
+        # Environment tanpa credential helper — mencegah token tersimpan di Windows Credential Store
+        git_env = os.environ.copy()
+        git_env["GIT_TERMINAL_PROMPT"] = "0"
+        git_env["GIT_ASKPASS"] = ""
+
         # Check if dir exists and is a git repo
         if os.path.isdir(repo_local_path) and os.path.isdir(os.path.join(repo_local_path, ".git")):
             self.write_log(f"\n{_('pulling')} ({repo_name})")
@@ -1494,11 +1557,12 @@ class GLRCApp(ctk.CTk):
             for i in range(1, 4):
                 try:
                     process = subprocess.Popen(
-                        ["git", "pull", "origin", branch_name],
+                        ["git", "-c", "credential.helper=", "pull", "origin", branch_name],
                         cwd=repo_local_path,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
-                        text=True, bufsize=1, universal_newlines=True
+                        text=True, bufsize=1, universal_newlines=True,
+                        env=git_env
                     )
                     for line in process.stdout:
                         self.write_log(f"    {line.strip()}")
@@ -1518,13 +1582,33 @@ class GLRCApp(ctk.CTk):
                 self.write_log(f"[+] '{repo_name}' berhasil update (branch: {branch_name}).")
                 with self.lock:
                     self.sukses += 1
+                    self.cloned_paths.append((repo_name, repo_local_path))
+
+                # --- Buat branch baru jika diminta (saat pull) ---
+                if create_new_branch and new_branch_name:
+                    self.write_log(f"    [>] Membuat branch baru '{new_branch_name}'...")
+                    try:
+                        cb_proc = subprocess.run(
+                            ["git", "checkout", "-b", new_branch_name],
+                            cwd=repo_local_path,
+                            capture_output=True, text=True,
+                            env=git_env
+                        )
+                        if cb_proc.returncode == 0:
+                            self.write_log(f"    [+] Branch '{new_branch_name}' berhasil dibuat.")
+                        else:
+                            self.write_log(f"    [-] Gagal buat branch: {cb_proc.stderr.strip()}")
+                    except Exception as exc:
+                        self.write_log(f"    [-] Error saat buat branch: {exc}")
+                elif create_new_branch and not new_branch_name:
+                    self.write_log("    [!] Checkbox 'Buat branch baru' dicentang tapi nama kosong, dilewati.")
             else:
                 self.write_log(f"[-] '{repo_name}' gagal update.")
                 with self.lock:
                     self.gagal += 1
         else:
             self.write_log(f"\n{_('cloning_repo', repo_name=repo_name, branch_name=branch_name)}")
-            clone_command = ["git", "clone", "-b", branch_name, auth_url]
+            clone_command = ["git", "-c", "credential.helper=", "clone", "-b", branch_name, auth_url]
             success = False
             for i in range(1, 4):
                 try:
@@ -1533,7 +1617,8 @@ class GLRCApp(ctk.CTk):
                         cwd=dest_folder,
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
-                        text=True, bufsize=1, universal_newlines=True
+                        text=True, bufsize=1, universal_newlines=True,
+                        env=git_env
                     )
 
                     for line in process.stdout:
@@ -1560,6 +1645,7 @@ class GLRCApp(ctk.CTk):
                 self.write_log(f"[+] '{repo_name}' berhasil di-clone (branch: {branch_name}).")
                 with self.lock:
                     self.sukses += 1
+                    self.cloned_paths.append((repo_name, repo_local_path))
 
                 # --- Set git config local ---
                 self._set_git_config_local(repo_local_path, repo_name)
@@ -1571,7 +1657,8 @@ class GLRCApp(ctk.CTk):
                         cb_proc = subprocess.run(
                             ["git", "checkout", "-b", new_branch_name],
                             cwd=repo_local_path,
-                            capture_output=True, text=True
+                            capture_output=True, text=True,
+                            env=git_env
                         )
                         if cb_proc.returncode == 0:
                             self.write_log(f"    [+] Branch '{new_branch_name}' berhasil dibuat.")
@@ -1598,6 +1685,8 @@ class GLRCApp(ctk.CTk):
             configs.append(("user.name", self.user_name))
         if self.user_email:
             configs.append(("user.email", self.user_email))
+        # Disable credential helper secara local agar tidak mengganggu token VS Code/Visual Studio
+        configs.append(("credential.helper", ""))
 
         if not configs:
             self.write_log("    [!] Data user GitLab tidak tersedia, git config local dilewati.")
@@ -1616,6 +1705,186 @@ class GLRCApp(ctk.CTk):
                     self.write_log(f"    [!] Gagal set {key}: {result.stderr.strip()}")
             except Exception as exc:
                 self.write_log(f"    [!] Error set git config {key}: {exc}")
+
+    # =========================================================================
+    # IDE DETECTION & OPEN IN IDE
+    # =========================================================================
+    def detect_available_ides(self):
+        """Detect programs registered to open directories via OS shell registry."""
+        found = []
+        seen_cmds = set()
+
+        if sys.platform == "win32":
+            import winreg
+            # Read from Directory\shell\ — same entries as Windows Explorer right-click menu
+            for hive in (winreg.HKEY_CLASSES_ROOT, winreg.HKEY_CURRENT_USER):
+                for sub in (r"Directory\shell", r"Directory\Background\shell"):
+                    try:
+                        shell_key = winreg.OpenKey(hive, sub)
+                    except OSError:
+                        continue
+                    try:
+                        i = 0
+                        while True:
+                            try:
+                                entry_name = winreg.EnumKey(shell_key, i)
+                                i += 1
+                            except OSError:
+                                break
+                            try:
+                                entry_key = winreg.OpenKey(shell_key, entry_name)
+                                # Get display name from (Default) value or MUIVerb
+                                display_name = None
+                                for val_name in (None, "MUIVerb"):
+                                    try:
+                                        val, _rt = winreg.QueryValueEx(entry_key, val_name)
+                                        if val and isinstance(val, str) and not val.startswith("@"):
+                                            display_name = val.replace("&", "")
+                                            break
+                                    except OSError:
+                                        pass
+                                if not display_name:
+                                    display_name = entry_name
+
+                                # Get command
+                                try:
+                                    cmd_key = winreg.OpenKey(entry_key, "command")
+                                    cmd_val, _rt = winreg.QueryValueEx(cmd_key, None)
+                                    winreg.CloseKey(cmd_key)
+                                except OSError:
+                                    winreg.CloseKey(entry_key)
+                                    continue
+                                winreg.CloseKey(entry_key)
+
+                                if not cmd_val:
+                                    continue
+
+                                # Extract exe path from command string like: "C:\...\code.exe" "%V"
+                                cmd_str = cmd_val.strip()
+                                if cmd_str.startswith('"'):
+                                    exe_path = cmd_str.split('"')[1]
+                                else:
+                                    exe_path = cmd_str.split()[0]
+
+                                exe_lower = exe_path.lower()
+                                if exe_lower in seen_cmds:
+                                    continue
+                                if os.path.isfile(exe_path):
+                                    seen_cmds.add(exe_lower)
+                                    found.append((display_name, exe_path))
+                            except OSError:
+                                pass
+                    finally:
+                        winreg.CloseKey(shell_key)
+
+        # Always add File Explorer as the last option
+        found.append((_("open_in_explorer"), "__explorer__"))
+
+        return found
+
+    def open_in_ide(self, ide_cmd, repo_path):
+        """Open a repository folder in the specified IDE or File Explorer."""
+        try:
+            if ide_cmd == "__explorer__":
+                if sys.platform == "win32":
+                    os.startfile(repo_path)
+                elif sys.platform == "darwin":
+                    subprocess.Popen(["open", repo_path])
+                else:
+                    subprocess.Popen(["xdg-open", repo_path])
+            elif sys.platform == "win32":
+                subprocess.Popen([ide_cmd, repo_path], creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP)
+            else:
+                subprocess.Popen([ide_cmd, repo_path])
+        except Exception as e:
+            show_error(self, _("error"), _("open_ide_failed", ide=ide_cmd, error=str(e)))
+
+    def show_clone_result_dialog(self, cloned_paths):
+        """Show clone results with option to open repos in IDE."""
+        available_ides = self.detect_available_ides()
+
+        modal = ctk.CTkToplevel(self)
+        modal.title(_("done_title"))
+
+        has_repos = bool(cloned_paths)
+        dialog_height = 400 if has_repos else 250
+        self.configure_modal_window(modal, 520, dialog_height)
+
+        frame = ctk.CTkFrame(modal, fg_color="transparent")
+        frame.pack(fill="both", expand=True, padx=20, pady=(20, 10))
+
+        # Success icon
+        icon_frame = ctk.CTkFrame(frame, width=50, height=50, corner_radius=25, fg_color="#2ecc71")
+        icon_frame.pack(pady=(0, 12))
+        icon_frame.pack_propagate(False)
+        ctk.CTkLabel(icon_frame, text="✔", text_color="white",
+                     font=ctk.CTkFont(size=24, weight="bold")).pack(expand=True)
+
+        # Summary text
+        ctk.CTkLabel(
+            frame,
+            text=_("clone_done", success=self.sukses, failed=self.gagal),
+            font=ctk.CTkFont(family="Open Sans", size=13),
+            justify="center", wraplength=460
+        ).pack(pady=(0, 10))
+
+        # Open in IDE section — only if there are cloned repos AND IDEs found
+        if has_repos:
+            ctk.CTkFrame(frame, height=1, fg_color="gray40").pack(fill="x", pady=(4, 8))
+
+            ctk.CTkLabel(
+                frame, text=_("open_in_ide_title"),
+                font=ctk.CTkFont(family="Open Sans", size=12, weight="bold"),
+                anchor="w"
+            ).pack(fill="x")
+
+            repo_scroll = ctk.CTkScrollableFrame(frame, height=min(len(cloned_paths) * 42, 180))
+            repo_scroll.pack(fill="both", expand=True, pady=(4, 8))
+
+            for repo_name, repo_path in cloned_paths:
+                row = ctk.CTkFrame(repo_scroll, fg_color="transparent")
+                row.pack(fill="x", pady=2)
+
+                ctk.CTkLabel(
+                    row, text=repo_name,
+                    font=ctk.CTkFont(family="Open Sans", size=12),
+                    anchor="w"
+                ).pack(side="left", fill="x", expand=True, padx=(4, 8))
+
+                open_btn = ctk.CTkButton(
+                    row,
+                    text=_("open_ide_btn"),
+                    image=self.open_in_new_img,
+                    compound="left",
+                    height=30,
+                    fg_color="#2980b9", hover_color="#1f618d",
+                    font=ctk.CTkFont(family="Open Sans", size=12),
+                )
+                open_btn.pack(side="right", padx=(0, 4))
+
+                def make_menu_handler(btn, path):
+                    def handler():
+                        menu = tk.Menu(btn, tearoff=0)
+                        for ide_name, ide_cmd in available_ides:
+                            menu.add_command(
+                                label=ide_name,
+                                command=lambda c=ide_cmd, p=path: self.open_in_ide(c, p)
+                            )
+                        # Show popup menu relative to the button
+                        try:
+                            x = btn.winfo_rootx()
+                            y = btn.winfo_rooty() + btn.winfo_height()
+                            menu.tk_popup(x, y)
+                        finally:
+                            menu.grab_release()
+                    return handler
+
+                open_btn.configure(command=make_menu_handler(open_btn, repo_path))
+
+        # OK button
+        btn_frame = ctk.CTkFrame(modal, fg_color="transparent")
+        btn_frame.pack(pady=(0, 16))
+        ctk.CTkButton(btn_frame, text="OK", width=120, height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=modal.destroy).pack()
 
 
 if __name__ == "__main__":

@@ -70,6 +70,7 @@ def show_custom_message(parent, title, message, icon_type="info", is_confirmatio
     _active_messages.add(msg_key)
 
     dialog = ctk.CTkToplevel(parent)
+    dialog.withdraw()  # Hide while configuring
     dialog.title(title)
     dialog.geometry("400x250")
     dialog.resizable(False, False)
@@ -77,8 +78,11 @@ def show_custom_message(parent, title, message, icon_type="info", is_confirmatio
     center_window(dialog, 400, 250)
     dialog.transient(parent)
     _apply_dialog_icon(dialog, parent)
-    dialog.after(50, lambda: _apply_dialog_icon(dialog, parent))
+
+    dialog.deiconify()  # Show fully configured
     _activate_dialog(dialog)
+    # Single backup for CTkToplevel internal callbacks (~150ms)
+    dialog.after(200, lambda: _apply_dialog_icon(dialog, parent))
 
     frame = ctk.CTkFrame(dialog, fg_color="transparent")
     frame.pack(fill="both", expand=True, padx=20, pady=(20, 10))
