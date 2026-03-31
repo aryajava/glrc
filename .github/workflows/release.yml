@@ -97,7 +97,20 @@ jobs:
           merge-multiple: true
 
       - name: List downloaded artifacts (debug)
-        run: find release-assets/ -type f | sort
+        run: |
+          echo "=== Directory structure ==="
+          find release-assets/ -type f | sort || echo "release-assets/ not found"
+          echo "=== Flat listing ==="
+          ls -laR release-assets/ || echo "No files"
+
+      - name: Flatten artifacts (if in subdirectories)
+        run: |
+          # If merge-multiple didn't flatten, move files up
+          find release-assets/ -mindepth 2 -type f -name 'glrc-*' -exec mv {} release-assets/ \;
+          # Remove empty subdirectories
+          find release-assets/ -mindepth 1 -type d -empty -delete
+          echo "=== After flatten ==="
+          ls -la release-assets/
 
       - name: Resolve tag
         id: tag
@@ -160,4 +173,9 @@ jobs:
           body: ${{ steps.changelog.outputs.body }}
           fail_on_unmatched_files: true
           files: |
-            release-assets/glrc-*
+            release-assets/glrc-en-windows.exe
+            release-assets/glrc-id-windows.exe
+            release-assets/glrc-en-linux
+            release-assets/glrc-id-linux
+            release-assets/glrc-en-macos
+            release-assets/glrc-id-macos
