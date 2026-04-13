@@ -1553,6 +1553,24 @@ class GLRCApp(ctk.CTk):
         # Check if dir exists and is a git repo
         if os.path.isdir(repo_local_path) and os.path.isdir(os.path.join(repo_local_path, ".git")):
             self.write_log(f"\n{_('pulling')} ({repo_name})")
+
+            # Simpan original remote URL, lalu set ke auth_url agar pull bisa autentikasi
+            original_remote_url = None
+            try:
+                result = subprocess.run(
+                    ["git", "remote", "get-url", "origin"],
+                    cwd=repo_local_path, capture_output=True, text=True, env=git_env
+                )
+                if result.returncode == 0:
+                    original_remote_url = result.stdout.strip()
+
+                subprocess.run(
+                    ["git", "remote", "set-url", "origin", auth_url],
+                    cwd=repo_local_path, capture_output=True, text=True, env=git_env
+                )
+            except Exception as e:
+                self.write_log(f"    [!] Gagal set remote URL: {e}")
+
             success = False
             for i in range(1, 4):
                 try:
@@ -1565,7 +1583,12 @@ class GLRCApp(ctk.CTk):
                         env=git_env
                     )
                     for line in process.stdout:
-                        self.write_log(f"    {line.strip()}")
+                        clean_line = (
+                            line.strip()
+                            .replace(self.api_token, "********")
+                            .replace("oauth2:********@", "")
+                        )
+                        self.write_log(f"    {clean_line}")
                     process.wait()
 
                     if process.returncode == 0:
@@ -1577,6 +1600,16 @@ class GLRCApp(ctk.CTk):
                 except Exception as e:
                     self.write_log(f"[-] Kesalahan pada '{repo_name}': {e}")
                     import time; time.sleep(2)
+
+            # Kembalikan remote URL asli agar token tidak tersimpan di .git/config
+            if original_remote_url:
+                try:
+                    subprocess.run(
+                        ["git", "remote", "set-url", "origin", original_remote_url],
+                        cwd=repo_local_path, capture_output=True, text=True, env=git_env
+                    )
+                except Exception:
+                    pass
             
             if success:
                 self.write_log(f"[+] '{repo_name}' berhasil update (branch: {branch_name}).")

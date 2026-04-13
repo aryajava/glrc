@@ -4,6 +4,16 @@ All notable changes to GLRC (GitLab Repo Cloner) will be documented in this file
 
 ======================
 
+## version 1.2.1
+
+Hotfix — git pull gagal autentikasi pada repository yang sudah ada di lokal.
+
+### bugfix:
+- fixed git pull authentication: perintah `git pull origin <branch>` gagal karena remote URL tidak mengandung token (error: `could not read Username ... terminal prompts disabled`). Sekarang remote origin di-set sementara ke authenticated URL sebelum pull, lalu dikembalikan ke URL asli setelah selesai agar token tidak tersimpan di `.git/config`
+- fixed pull log sanitization: output log saat pull sekarang juga menyembunyikan token (di-mask `********`), sama seperti pada clone
+
+======================
+
 ## version 1.2.0
 
 UI polish and icon system overhaul — replacing emoji text with Material Icons rendered via PIL, fixing visual jitter, and standardizing button sizes across the application.
