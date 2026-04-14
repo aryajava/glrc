@@ -1,7 +1,10 @@
 import json
 import os
+import logging
 from datetime import datetime
 from .dpapi_utils import crypt_protect_data, crypt_unprotect_data
+
+logger = logging.getLogger("glrc")
 
 CONFIG_FILE = "config.dat"
 
@@ -42,7 +45,7 @@ class ConfigManager:
                     data = json.loads(decrypted_bytes.decode('utf-8'))
                     self.config_data.update(data)
             except Exception as e:
-                print(f"Error loading config: {e}")
+                logger.warning("Error loading config: %s", e)
 
     def save_config(self):
         """Menyimpan konfigurasi saat ini ke config.dat dengan enkripsi."""
@@ -53,7 +56,7 @@ class ConfigManager:
                 with open(CONFIG_FILE, "wb") as f:
                     f.write(encrypted_data)
         except Exception as e:
-            print(f"Error saving config: {e}")
+            logger.warning("Error saving config: %s", e)
 
     def set_gitlab_url(self, url: str):
         self.config_data["gitlab_url"] = url
@@ -124,7 +127,7 @@ class ConfigManager:
 
             return pat
         except Exception as e:
-            print(f"Error checking PAT expiry: {e}")
+            logger.warning("Error checking PAT expiry: %s", e)
 
         return ""
 

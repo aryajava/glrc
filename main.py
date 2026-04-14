@@ -10,8 +10,13 @@ from urllib.parse import urlparse, quote
 import os
 import sys
 import json
+import time
+import shutil
+import logging
 from datetime import datetime, timedelta
 from PIL import Image, ImageDraw, ImageFont
+
+logger = logging.getLogger("glrc")
 
 # Import dari struktur baru
 from src.core.config_manager import ConfigManager
@@ -628,6 +633,24 @@ class GLRCApp(ctk.CTk):
             show_warning(self, _("warning"), _("empty_creds"))
             return
 
+        # Validasi format URL
+        try:
+            parsed = urlparse(self.gitlab_url)
+            if parsed.scheme not in ("http", "https"):
+                show_warning(self, _("warning"), _("invalid_url_scheme"))
+                return
+            if not parsed.hostname:
+                show_warning(self, _("warning"), _("invalid_url_host"))
+                return
+        except Exception:
+            show_warning(self, _("warning"), _("invalid_url_scheme"))
+            return
+
+        # Cek git binary tersedia
+        if not shutil.which("git"):
+            show_error(self, _("error"), _("git_not_found"))
+            return
+
         # Update url ke config supaya tersimpan URL terakhir yang dipakai
         self.config.set_gitlab_url(self.gitlab_url)
 
@@ -656,7 +679,7 @@ class GLRCApp(ctk.CTk):
         """Fetch user info first, then fetch repos."""
         headers = {"PRIVATE-TOKEN": self.api_token}
         try:
-            user_resp = requests.get(f"{self.gitlab_url}/api/v4/user", headers=headers)
+            user_resp = requests.get(f"{self.gitlab_url}/api/v4/user", headers=headers, timeout=15)
             user_resp.raise_for_status()
             user_data = user_resp.json()
             self.user_name = user_data.get("name", "")
@@ -825,7 +848,7 @@ class GLRCApp(ctk.CTk):
                         f"?membership=true&simple=true"
                         f"&per_page=100&page={page}{api_search}"
                     )
-                    response = requests.get(api_url, headers=headers)
+                    response = requests.get(api_url, headers=headers, timeout=30)
                     response.raise_for_status()
                     data = response.json()
                     
@@ -861,7 +884,7 @@ class GLRCApp(ctk.CTk):
                     f"?membership=true&simple=true"
                     f"&per_page={self.per_page}&page={self.current_page}"
                 )
-                response = requests.get(api_url, headers=headers)
+                response = requests.get(api_url, headers=headers, timeout=30)
                 response.raise_for_status()
                 projects_to_show = response.json()
                 
@@ -992,7 +1015,7 @@ class GLRCApp(ctk.CTk):
                     expiry_str = _("permanent")
                 else:
                     expiry_str = f"{exp_dt.strftime('%d %b %Y %H:%M:%S')} ({days_rem} hari)"
-            except:
+            except Exception:
                 expiry_str = _("invalid_date")
                 
         ctk.CTkLabel(info_frame, text=_("token_duration"), font=ctk.CTkFont(family="Open Sans", weight="bold")).pack(side="top", anchor="w", padx=10, pady=(10, 0))
@@ -1360,7 +1383,7 @@ class GLRCApp(ctk.CTk):
                 page = 1
                 while True:
                     api_url = f"{self.gitlab_url}/api/v4/projects/{project_id}/repository/branches?per_page=100&page={page}"
-                    response = requests.get(api_url, headers=headers)
+                    response = requests.get(api_url, headers=headers, timeout=15)
                     if response.status_code != 200: 
                         break
                         
@@ -1596,10 +1619,10 @@ class GLRCApp(ctk.CTk):
                         break
                     else:
                         self.write_log(f"[-] Pull failed. {_('retrying', i=i)}")
-                        import time; time.sleep(2)
+                        time.sleep(2)
                 except Exception as e:
                     self.write_log(f"[-] Kesalahan pada '{repo_name}': {e}")
-                    import time; time.sleep(2)
+                    time.sleep(2)
 
             # Kembalikan remote URL asli agar token tidak tersimpan di .git/config
             if original_remote_url:
@@ -1669,10 +1692,10 @@ class GLRCApp(ctk.CTk):
                         break
                     else:
                         self.write_log(f"[-] Clone failed. {_('retrying', i=i)}")
-                        import time; time.sleep(2)
+                        time.sleep(2)
                 except Exception as e:
                     self.write_log(f"[-] Kesalahan pada '{repo_name}': {e}")
-                    import time; time.sleep(2)
+                    time.sleep(2)
 
             if success:
                 self.write_log(f"[+] '{repo_name}' berhasil di-clone (branch: {branch_name}).")

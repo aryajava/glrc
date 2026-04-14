@@ -4,6 +4,24 @@ All notable changes to GLRC (GitLab Repo Cloner) will be documented in this file
 
 ======================
 
+## version 1.2.2
+
+Bugfix & hardening — perbaikan keamanan, validasi input, dan stabilitas jaringan.
+
+### bugfix:
+- fixed timeout: semua `requests.get()` sekarang menggunakan timeout (15-30s) untuk mencegah UI freeze jika GitLab server down/hang
+- fixed bare except: `except:` (bare except) di profile modal diganti `except Exception:` agar tidak menangkap `KeyboardInterrupt`/`SystemExit`
+- fixed inline import: `import time` dipindahkan ke top-level module, bukan inline di dalam retry loop
+
+### feature:
+- added git binary detection: validasi `git` terinstall di PATH saat klik Connect — menampilkan pesan error user-friendly jika tidak ditemukan
+- added URL validation: validasi format URL GitLab (harus `http://` atau `https://`, hostname tidak boleh kosong) sebelum mengirim token
+
+### improvement:
+- replaced `print()` dengan `logging` di `config_manager.py` dan `gitlab_api.py` — output error sekarang terintegrasi dengan Python logging system, bukan hilang di stdout PyInstaller binary
+
+======================
+
 ## version 1.2.1
 
 Hotfix — git pull gagal autentikasi pada repository yang sudah ada di lokal.

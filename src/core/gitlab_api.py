@@ -1,8 +1,11 @@
 """
 GitLab API operations untuk GLRC Application
 """
+import logging
 import requests
 from typing import List, Dict, Optional
+
+logger = logging.getLogger("glrc")
 
 
 class GitLabAPI:
@@ -40,7 +43,7 @@ class GitLabAPI:
             else:
                 return False, None
         except Exception as e:
-            print(f"Connection test failed: {e}")
+            logger.warning("Connection test failed: %s", e)
             return False, None
 
     def fetch_all_projects(self) -> List[Dict]:
@@ -83,7 +86,7 @@ class GitLabAPI:
                 page += 1
 
             except Exception as e:
-                print(f"Error fetching projects: {e}")
+                logger.warning("Error fetching projects: %s", e)
                 break
 
         return all_projects
@@ -109,5 +112,5 @@ class GitLabAPI:
             else:
                 return []
         except Exception as e:
-            print(f"Error fetching branches for project {project_id}: {e}")
+            logger.warning("Error fetching branches for project %s: %s", project_id, e)
             return []
