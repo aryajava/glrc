@@ -4,6 +4,21 @@ All notable changes to GLRC (GitLab Repo Cloner) will be documented in this file
 
 ======================
 
+## version 1.2.3
+
+Perbaikan teks i18n dan penanganan error git binary yang lebih elegan dari versi sebelumnya.
+
+### bugfix:
+- fixed raw exception logging: Menangkap `FileNotFoundError` / `[WinError 2]` saat proses clone/pull dan menampilkan log user-friendly ("[!] Git tidak terinstall atau tidak ditemukan") daripada error stack trace kasar yang membingungkan.
+- fixed thread start missing git check: Menambahkan pengecekan instalasi `git` di awal proses clone untuk menghentikan proses secepatnya jika `git` tidak ada di sistem.
+
+### improvement:
+- i18n completion: Memindahkan semua sisa hardcoded Indonesian strings pada log dan UI (15+ strings) ke dalam sistem translasi `i18n.py`.
+- pagination fix: Menambahkan missing translation key `"page"` yang hilang di versi sebelumnya.
+- code cleanup: Mengganti parameter koneksi yang hardcoded di `main.py` menggunakan konstanta tersentralisasi di `constants.py` (`MAX_RETRY_ATTEMPTS`, `MAX_CONCURRENT_CLONES`, `RETRY_DELAY_SECONDS`).
+
+======================
+
 ## version 1.2.2
 
 Bugfix & hardening — perbaikan keamanan, validasi input, dan stabilitas jaringan.

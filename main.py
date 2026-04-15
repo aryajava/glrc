@@ -31,7 +31,8 @@ from src.constants import (
     ICON_VISIBILITY_OFF, ICON_SEARCH, ICON_RESET,
     ICON_EXPORT, ICON_IMPORT, ICON_CHECK_ALL, ICON_UNCHECK_ALL, ICON_LOGS, ICON_OPEN_IN_NEW,
     DEFAULT_LOGIN_WIDTH, DEFAULT_LOGIN_HEIGHT, DEFAULT_EXPANDED_WIDTH,
-    DEFAULT_EXPANDED_HEIGHT, DEFAULT_PER_PAGE
+    DEFAULT_EXPANDED_HEIGHT, DEFAULT_PER_PAGE,
+    MAX_CONCURRENT_CLONES, MAX_RETRY_ATTEMPTS, RETRY_DELAY_SECONDS
 )
 
 class GLRCApp(ctk.CTk):
@@ -761,7 +762,7 @@ class GLRCApp(ctk.CTk):
                 self.current_page = page
                 self.load_page_data()
             else:
-                show_warning(self, _("warning"), f"Halaman harus antara 1 dan {self.total_pages}")
+                show_warning(self, _("warning"), _("page_out_of_range", total_pages=self.total_pages))
         except ValueError:
             pass
 
@@ -908,7 +909,7 @@ class GLRCApp(ctk.CTk):
         except requests.exceptions.RequestException as e:
             self.after(0, lambda root=self: show_error(root, _("fetching_error"), f"{_('error')}: {e}"))
             self.after(0, lambda: self.connect_btn.configure(state="normal", text=_("connect_btn")))
-            self.after(0, lambda: self.page_label.configure(text=f"Halaman {self.current_page} (Error)"))
+            self.after(0, lambda: self.page_label.configure(text=_("page_error", current_page=self.current_page)))
             self.after(0, lambda: self.set_ui_loading_state(False))
 
     def show_main_frame(self, projects, has_next):
@@ -1513,7 +1514,13 @@ class GLRCApp(ctk.CTk):
             self.log_window.textbox.configure(state="disabled")
 
         urls_to_clone = list(self.selected_repos.keys())
-        self.write_log(f"[*] Memulai proses clone untuk {len(urls_to_clone)} repositori...")
+        
+        if not shutil.which("git"):
+            self.write_log(_("git_not_found_log"))
+            self.clone_btn.configure(state="normal", text=_("step3_btn"))
+            return
+
+        self.write_log(_("start_clone_process", count=len(urls_to_clone)))
 
         thread = threading.Thread(target=self.run_multiple_clones, args=(urls_to_clone, dest_folder))
         thread.daemon = True
@@ -1527,12 +1534,12 @@ class GLRCApp(ctk.CTk):
         
         clone_method = self.config.get_clone_method()
 
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_CONCURRENT_CLONES) as executor:
             futures = [executor.submit(self._process_single_repo, url, dest_folder, clone_method) for url in urls]
             concurrent.futures.wait(futures)
 
         self.write_log(f"\n{'=' * 50}")
-        self.write_log(f"PROSES SELESAI!  Berhasil: {self.sukses}  |  Gagal: {self.gagal}")
+        self.write_log(_("process_finished", success=self.sukses, failed=self.gagal))
         self.write_log(f"{'=' * 50}")
 
         self.after(0, lambda: self.clone_btn.configure(
@@ -1592,10 +1599,10 @@ class GLRCApp(ctk.CTk):
                     cwd=repo_local_path, capture_output=True, text=True, env=git_env
                 )
             except Exception as e:
-                self.write_log(f"    [!] Gagal set remote URL: {e}")
+                self.write_log(_("fail_set_remote", err=str(e)))
 
             success = False
-            for i in range(1, 4):
+            for i in range(1, MAX_RETRY_ATTEMPTS + 1):
                 try:
                     process = subprocess.Popen(
                         ["git", "-c", "credential.helper=", "pull", "origin", branch_name],
@@ -1618,11 +1625,14 @@ class GLRCApp(ctk.CTk):
                         success = True
                         break
                     else:
-                        self.write_log(f"[-] Pull failed. {_('retrying', i=i)}")
-                        time.sleep(2)
+                        self.write_log(_("pull_failed_retry", retry_msg=_('retrying', i=i)))
+                        time.sleep(RETRY_DELAY_SECONDS)
                 except Exception as e:
-                    self.write_log(f"[-] Kesalahan pada '{repo_name}': {e}")
-                    time.sleep(2)
+                    if isinstance(e, FileNotFoundError) or (hasattr(e, 'winerror') and e.winerror == 2):
+                        self.write_log(_("git_not_found_log"))
+                    else:
+                        self.write_log(_("error_on_repo", repo_name=repo_name, err=str(e)))
+                    time.sleep(RETRY_DELAY_SECONDS)
 
             # Kembalikan remote URL asli agar token tidak tersimpan di .git/config
             if original_remote_url:
@@ -1635,14 +1645,14 @@ class GLRCApp(ctk.CTk):
                     pass
             
             if success:
-                self.write_log(f"[+] '{repo_name}' berhasil update (branch: {branch_name}).")
+                self.write_log(_("repo_update_success", repo_name=repo_name, branch_name=branch_name))
                 with self.lock:
                     self.sukses += 1
                     self.cloned_paths.append((repo_name, repo_local_path))
 
                 # --- Buat branch baru jika diminta (saat pull) ---
                 if create_new_branch and new_branch_name:
-                    self.write_log(f"    [>] Membuat branch baru '{new_branch_name}'...")
+                    self.write_log(_("create_new_branch_log", new_branch_name=new_branch_name))
                     try:
                         cb_proc = subprocess.run(
                             ["git", "checkout", "-b", new_branch_name],
@@ -1651,22 +1661,25 @@ class GLRCApp(ctk.CTk):
                             env=git_env
                         )
                         if cb_proc.returncode == 0:
-                            self.write_log(f"    [+] Branch '{new_branch_name}' berhasil dibuat.")
+                            self.write_log(_("branch_create_success", new_branch_name=new_branch_name))
                         else:
-                            self.write_log(f"    [-] Gagal buat branch: {cb_proc.stderr.strip()}")
+                            self.write_log(_("branch_create_failed", err=cb_proc.stderr.strip()))
                     except Exception as exc:
-                        self.write_log(f"    [-] Error saat buat branch: {exc}")
+                        if isinstance(exc, FileNotFoundError) or (hasattr(exc, 'winerror') and exc.winerror == 2):
+                            self.write_log(_("git_not_found_log"))
+                        else:
+                            self.write_log(_("branch_create_error", err=str(exc)))
                 elif create_new_branch and not new_branch_name:
-                    self.write_log("    [!] Checkbox 'Buat branch baru' dicentang tapi nama kosong, dilewati.")
+                    self.write_log(_("skip_empty_branch_name"))
             else:
-                self.write_log(f"[-] '{repo_name}' gagal update.")
+                self.write_log(_("repo_update_failed", repo_name=repo_name))
                 with self.lock:
                     self.gagal += 1
         else:
             self.write_log(f"\n{_('cloning_repo', repo_name=repo_name, branch_name=branch_name)}")
             clone_command = ["git", "-c", "credential.helper=", "clone", "-b", branch_name, auth_url]
             success = False
-            for i in range(1, 4):
+            for i in range(1, MAX_RETRY_ATTEMPTS + 1):
                 try:
                     process = subprocess.Popen(
                         clone_command,
@@ -1691,14 +1704,17 @@ class GLRCApp(ctk.CTk):
                         success = True
                         break
                     else:
-                        self.write_log(f"[-] Clone failed. {_('retrying', i=i)}")
-                        time.sleep(2)
+                        self.write_log(_("clone_failed_retry", retry_msg=_('retrying', i=i)))
+                        time.sleep(RETRY_DELAY_SECONDS)
                 except Exception as e:
-                    self.write_log(f"[-] Kesalahan pada '{repo_name}': {e}")
-                    time.sleep(2)
+                    if isinstance(e, FileNotFoundError) or (hasattr(e, 'winerror') and e.winerror == 2):
+                        self.write_log(_("git_not_found_log"))
+                    else:
+                        self.write_log(_("error_on_repo", repo_name=repo_name, err=str(e)))
+                    time.sleep(RETRY_DELAY_SECONDS)
 
             if success:
-                self.write_log(f"[+] '{repo_name}' berhasil di-clone (branch: {branch_name}).")
+                self.write_log(_("repo_clone_success", repo_name=repo_name, branch_name=branch_name))
                 with self.lock:
                     self.sukses += 1
                     self.cloned_paths.append((repo_name, repo_local_path))
@@ -1726,14 +1742,14 @@ class GLRCApp(ctk.CTk):
                     self.write_log("    [!] Checkbox 'Buat branch baru' dicentang tapi nama kosong, dilewati.")
 
             else:
-                self.write_log(f"[-] '{repo_name}' gagal di-clone")
+                self.write_log(_("repo_clone_failed", repo_name=repo_name))
                 with self.lock:
                     self.gagal += 1
 
     def _set_git_config_local(self, repo_path: str, repo_name: str):
         """Set git config user.name dan user.email secara local di repo yang baru di-clone."""
         if not os.path.isdir(repo_path):
-            self.write_log(f"    [!] Folder repo tidak ditemukan, skip git config: {repo_path}")
+            self.write_log(_("repo_dir_not_found"))
             return
 
         configs = []
@@ -1745,7 +1761,7 @@ class GLRCApp(ctk.CTk):
         configs.append(("credential.helper", ""))
 
         if not configs:
-            self.write_log("    [!] Data user GitLab tidak tersedia, git config local dilewati.")
+            self.write_log(_("gitlab_user_data_unavailable"))
             return
 
         for key, value in configs:
