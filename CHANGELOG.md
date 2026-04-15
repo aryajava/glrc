@@ -4,6 +4,17 @@ All notable changes to GLRC (GitLab Repo Cloner) will be documented in this file
 
 ======================
 
+## version 1.3.0
+
+Cross-Platform & Security — perombakan arsitektur penyimpanan konfigurasi untuk mematangkan dukungan lintas OS (Cross-platform) dan meningkatkan standar keamanan. Rilis ini mengatasi crash fatal pada Linux dan macOS yang terjadi pada versi sebelumnya akibat _dependency_ DPAPI Windows.
+
+### feature:
+- cross-platform credential standard: Implementasi penuh pustaka `keyring` (terintegrasi ke *Windows Credential Manager* / *macOS Keychain* / Linux *Secret Service*).
+- clean executable vault: Memisahkan file konfigurasi `config.json` sebagai data non-sensitif portabel dan mengisolasi letaknya di direktori khusus *User Profile* (`~/.glrc/`) guna menghindari "file sampah" ketika menjankan _.exe_ secara *portable*.
+- automated secure migration: Secara otomatis membongkar file `config.dat` (enkripsi versi 1.2 lama) saat startup pertama kali, memindahkan Sandi ke dalam Keyring, mencadangkannya menjadi `.bak`, lalu menghapus modul Windows Native (`dpapi_utils`).
+
+======================
+
 ## version 1.2.3
 
 Perbaikan teks i18n dan penanganan error git binary yang lebih elegan dari versi sebelumnya.

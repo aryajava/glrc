@@ -20,6 +20,8 @@ ENV/
 
 # Sensitive Configuration data
 config.dat
+config.dat.bak
+config.json
 default_lang.txt
 
 # Keep required UI assets tracked (fonts + logos are part of distributable build)

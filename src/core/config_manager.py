@@ -2,18 +2,24 @@ import json
 import os
 import logging
 from datetime import datetime
-from .dpapi_utils import crypt_protect_data, crypt_unprotect_data
+import keyring
+from pathlib import Path
 
 logger = logging.getLogger("glrc")
 
-CONFIG_FILE = "config.dat"
+CONFIG_DIR = Path.home() / ".glrc"
+CONFIG_FILE = CONFIG_DIR / "config.json"
+OLD_CONFIG_FILE = "config.dat"
+
+SERVICE_NAME = "GLRC_App"
+USERNAME = "gitlab_token"
 
 class ConfigManager:
-    """Mengelola pembacaan dan penyimpanan konfigurasi (URL, Destinasi, dan PAT) terenkripsi."""
+    """Mengelola pembacaan dan penyimpanan konfigurasi (URL, Destinasi) di JSON transparan, 
+    dan mengelola PAT menggunakan OS keyring yang aman secara cross-platform."""
     def __init__(self):
         self.default_bundled_lang = "en"
         lang_path = os.path.join(os.path.dirname(__file__), "default_lang.txt")
-        # In PyInstaller, the bundled file is in sys._MEIPASS. Let's try standard path first.
         import sys
         if hasattr(sys, '_MEIPASS'):
             lang_path = os.path.join(sys._MEIPASS, "default_lang.txt")
@@ -25,38 +31,95 @@ class ConfigManager:
         self.config_data = {
             "gitlab_url": "",
             "dest_folder": "",
-            "pat": "",
             "pat_expiry": None,
             "language": self.default_bundled_lang,
             "theme": "System",
             "clone_method": "HTTPS"
         }
+        
+        # Buat direktori jika belum ada
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        
+        self.migrate_old_config()
         self.load_config()
 
-    def load_config(self):
-        """Membaca config.dat dan mendekripsi isinya."""
-        if os.path.exists(CONFIG_FILE):
+    def migrate_old_config(self):
+        """Memigrasi data dari config.dat lama yang menggunakan enkripsi DPAPI Windows ke format baru."""
+        if os.path.exists(OLD_CONFIG_FILE):
+            logger.warning("Mendeteksi config.dat versi lama. Memulai migrasi...")
             try:
-                with open(CONFIG_FILE, "rb") as f:
-                    encrypted_data = f.read()
+                # Coba parse dengan DPAPI. Hanya work di Windows.
+                if os.name == 'nt':
+                    import ctypes
+                    import ctypes.wintypes
+                    from ctypes import windll
 
-                decrypted_bytes = crypt_unprotect_data(encrypted_data)
-                if decrypted_bytes:
-                    data = json.loads(decrypted_bytes.decode('utf-8'))
+                    class DATA_BLOB(ctypes.Structure):
+                        _fields_ = [
+                            ("cbData", ctypes.wintypes.DWORD),
+                            ("pbData", ctypes.POINTER(ctypes.c_char))
+                        ]
+
+                    def unprotect(encrypted_bytes):
+                        data_in = DATA_BLOB()
+                        data_in.cbData = len(encrypted_bytes)
+                        data_in.pbData = ctypes.cast(ctypes.c_char_p(encrypted_bytes), ctypes.POINTER(ctypes.c_char))
+                        data_out = DATA_BLOB()
+                        
+                        success = windll.crypt32.CryptUnprotectData(
+                            ctypes.byref(data_in), None, None, None, None, 0, ctypes.byref(data_out)
+                        )
+                        if not success: return None
+                        result = ctypes.string_at(data_out.pbData, data_out.cbData)
+                        if data_out.pbData:
+                            windll.kernel32.LocalFree(ctypes.cast(data_out.pbData, ctypes.c_void_p))
+                        return result
+
+                    with open(OLD_CONFIG_FILE, "rb") as f:
+                        enc = f.read()
+                    
+                    dec = unprotect(enc)
+                    if dec:
+                        data = json.loads(dec.decode('utf-8'))
+                        # Pindahkan password ke keyring
+                        pat = data.get("pat")
+                        if pat:
+                            try:
+                                keyring.set_password(SERVICE_NAME, USERNAME, pat)
+                            except Exception as e:
+                                logger.warning(f"Gagal memigrasi token ke keyring: {e}")
+                        
+                        # Hapus pat dari data
+                        data.pop("pat", None)
+                        self.config_data.update(data)
+                        self.save_config()
+            except Exception as e:
+                logger.warning(f"Gagal migrasi config.dat lama: {e}")
+            finally:
+                # Pindahkan agar tidak terbaca lagi
+                try:
+                    os.rename(OLD_CONFIG_FILE, OLD_CONFIG_FILE + ".bak")
+                    logger.warning("Migrasi selesai, config lama di-rename ke .bak")
+                except Exception:
+                    pass
+
+    def load_config(self):
+        """Membaca konfigurasi non-sensitif dari config.json."""
+        if CONFIG_FILE.exists():
+            try:
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                    data = json.load(f)
                     self.config_data.update(data)
             except Exception as e:
-                logger.warning("Error loading config: %s", e)
+                logger.warning("Error loading config.json: %s", e)
 
     def save_config(self):
-        """Menyimpan konfigurasi saat ini ke config.dat dengan enkripsi."""
+        """Menyimpan konfigurasi non-sensitif ke config.json."""
         try:
-            json_str = json.dumps(self.config_data, indent=4)
-            encrypted_data = crypt_protect_data(json_str.encode('utf-8'))
-            if encrypted_data:
-                with open(CONFIG_FILE, "wb") as f:
-                    f.write(encrypted_data)
+            with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                json.dump(self.config_data, f, indent=4)
         except Exception as e:
-            logger.warning("Error saving config: %s", e)
+            logger.warning("Error saving config.json: %s", e)
 
     def set_gitlab_url(self, url: str):
         self.config_data["gitlab_url"] = url
@@ -75,8 +138,6 @@ class ConfigManager:
 
     def get_gitlab_url(self) -> str:
         return self.config_data.get("gitlab_url", "")
-
-    # --- New Settings ---
 
     def set_language(self, lang: str):
         self.config_data["language"] = lang
@@ -99,47 +160,62 @@ class ConfigManager:
     def get_clone_method(self) -> str:
         return self.config_data.get("clone_method", "HTTPS")
 
-    # --- Pengelolaan PAT Terenkripsi ---
+    # --- Pengelolaan PAT via Keyring ---
 
     def save_pat(self, pat: str, expiry_date_iso: str):
-        """Menyimpan PAT dan masa berlakunya ke dalam config terenkripsi."""
+        """Menyimpan PAT menggunakan OS Keyring dan konfig expiry ke JSON."""
         if not pat:
             return
 
-        self.config_data["pat"] = pat
-        self.config_data["pat_expiry"] = expiry_date_iso
-        self.save_config()
+        try:
+            keyring.set_password(SERVICE_NAME, USERNAME, pat)
+            self.config_data["pat_expiry"] = expiry_date_iso
+            self.save_config()
+        except Exception as e:
+            logger.error("Error menyimpan password ke OS Keyring: %s", e)
+            pass
 
     def get_valid_pat(self) -> str:
-        """Memuat PAT yang tersimpan. Mengembalikan string kosong jika kadaluarsa atau tidak ada."""
+        """Memuat PAT dari Keyring dan memvalidasi kadaluarsa."""
         expiry_str = self.config_data.get("pat_expiry")
-        pat = self.config_data.get("pat", "")
-        if not expiry_str or not pat:
+        if not expiry_str:
             return ""
 
         try:
+            pat = keyring.get_password(SERVICE_NAME, USERNAME)
+            if not pat:
+                return ""
+
             # Pengecekan expired
             expiry_date = datetime.fromisoformat(expiry_str)
             if datetime.now() > expiry_date:
-                # Sudah kadaluarsa, hapus token
                 self.delete_pat()
                 return ""
 
             return pat
         except Exception as e:
-            logger.warning("Error checking PAT expiry: %s", e)
-
-        return ""
+            logger.warning("Error membaca PAT dari Keyring atau cek expiry: %s", e)
+            return ""
 
     def get_saved_pat(self) -> dict:
-        """Backward-compatible accessor for UI profile modal."""
+        """Accessor untuk UI profile modal."""
+        try:
+            pat = keyring.get_password(SERVICE_NAME, USERNAME) or ""
+        except Exception:
+            pat = ""
+            
         return {
-            "pat": self.config_data.get("pat", ""),
+            "pat": pat,
             "expiry_date": self.config_data.get("pat_expiry")
         }
 
     def delete_pat(self):
-        """Menghapus PAT dan tanggal expiry dari config."""
-        self.config_data["pat"] = ""
+        """Menghapus PAT dari Keyring dan unset tanggal expiry dari config."""
+        try:
+            if keyring.get_password(SERVICE_NAME, USERNAME) is not None:
+                keyring.delete_password(SERVICE_NAME, USERNAME)
+        except Exception as e:
+            logger.warning("Gagal menghapus pat dari keyring: %s", e)
+            
         self.config_data["pat_expiry"] = None
         self.save_config()

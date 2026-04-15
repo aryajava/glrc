@@ -11,3 +11,5 @@ reportlab>=4.1.0
 pillow>=10.2.0
 python-dateutil>=2.8.2
 pyinstaller>=6.19.0
+keyring>=24.3.0
+keyrings.alt>=5.0.0
