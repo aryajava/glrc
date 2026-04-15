@@ -1724,7 +1724,7 @@ class GLRCApp(ctk.CTk):
 
                 # --- Buat branch baru jika diminta ---
                 if create_new_branch and new_branch_name:
-                    self.write_log(f"    [>] Membuat branch baru '{new_branch_name}'...")
+                    self.write_log(_("create_new_branch_log", new_branch_name=new_branch_name))
                     try:
                         cb_proc = subprocess.run(
                             ["git", "checkout", "-b", new_branch_name],
@@ -1733,13 +1733,16 @@ class GLRCApp(ctk.CTk):
                             env=git_env
                         )
                         if cb_proc.returncode == 0:
-                            self.write_log(f"    [+] Branch '{new_branch_name}' berhasil dibuat.")
+                            self.write_log(_("branch_create_success", new_branch_name=new_branch_name))
                         else:
-                            self.write_log(f"    [-] Gagal buat branch: {cb_proc.stderr.strip()}")
+                            self.write_log(_("branch_create_failed", err=cb_proc.stderr.strip()))
                     except Exception as exc:
-                        self.write_log(f"    [-] Error saat buat branch: {exc}")
+                        if isinstance(exc, FileNotFoundError) or (hasattr(exc, 'winerror') and exc.winerror == 2):
+                            self.write_log(_("git_not_found_log"))
+                        else:
+                            self.write_log(_("branch_create_error", err=str(exc)))
                 elif create_new_branch and not new_branch_name:
-                    self.write_log("    [!] Checkbox 'Buat branch baru' dicentang tapi nama kosong, dilewati.")
+                    self.write_log(_("skip_empty_branch_name"))
 
             else:
                 self.write_log(_("repo_clone_failed", repo_name=repo_name))
