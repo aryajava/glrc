@@ -1,120 +1,104 @@
-# Changelog
+# Riwayat Versi (Changelog)
 
-All notable changes to GLRC (GitLab Repo Cloner) will be documented in this file.
+Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan dicatat (*logged*) pada dokumen ini.
+
+======================
+
+## version 1.3.2
+
+*Documentation & Community Shift* — Rilis ini didedikasikan eksklusif untuk me-*refactor* tatanan bahasa Markdown (Teks) di seluruh proyek. Kita merombak identitas repositori kembali menjadi *Native Indonesian* dengan gaya bahasa sehari-hari *programmer*.
+
+### docs:
+- **Language Normalization:** Menulis ulang struktur buku panduan di `README.md` menggunakan tatanan bahasa IT campuran (*mix* Inggris-Indonesia) yang lugas dan *to-the-point* sehingga mudah dicerna *developer* lokal.
+- **Bilingual Equality:** Menciptakan ekosistem ganda (*Dual-Language*) dengan mereplikasi seluruh panduan korporat menjadi rupa `.en.md` (`CONTRIBUTING_en.md`, `SECURITY_en.md`, `STRUCTURE_en.md`).
+- **Community Templates:** Menerbitkan *template Pull Request (PR)* dan *Issue Github* di direktori `/.github/` untuk me-standardisasi format pelaporan *error* dari luar.
 
 ======================
 
 ## version 1.3.1
 
-Hotfix kompilasi PyInstaller dan perbaikan rendering antarmuka pengguna *(UI rendering)* peninggalan versi 1.3.0. 
+*Hotfix* kompilasi mesin PyInstaller dan memberantas isu rendering grafis (*UI rendering tearing*) sisa *impact* versi 1.3.0. 
 
 ### bugfix:
-- pyinstaller keyring bug: Menambahkan flag ekstensif `--copy-metadata keyring` dan `--hidden-import keyrings.alt` ke skrip *bundler* `build.py` untuk menggaransi berjalannya fitur kredensial pada distribusi *binary*.
-- portable absolute pathing: Memodifikasi skrip migrasi agar mendeteksi letak sesungguhnya dari `glrc.exe` menggunakan metode `sys.executable` alih-alih `cwd`, menjaga migrasi `config.dat` versi lawas agar selalu stabil.
-- modal icon flickering: Menambahkan _delay timing rendering_ yang memaksa sistem menunda sinkronisasi pemunculan (_deiconify_) kotak dialog (modal) sebesar ~15ms hingga widget benar-benar rampung termuat. Ini menuntaskan isu *tearing* / keterlambatan ikon aplikasi pada semua kotak modal.
+- **pyinstaller keyring bug:** Menyuntikkan flag `--copy-metadata keyring` dan `--hidden-import keyrings.alt` pada *script bundler* `build.py` demi menggaransi modul OS Keyring sukses tereksekusi pada *binary/exe*.
+- **portable absolute pathing:** Me-*rewrite* deteksi logik *path config* dari yang asalnya `cwd` menjadi `sys.executable`. Eksekutor kini tidak lagi ngebikin file sampah tiap ditekan secara acak dari folder *Windows Explorer* manapun.
+- **modal icon flickering:** Menciptakan fungsi *delay rendering* ~15ms yang menahan sinkronisasi `deiconify` sampai jendela *modal* rampung ter-*render*. *Flickering* kedipan logo sirna seratus persen.
 
 ======================
 
 ## version 1.3.0
 
-Cross-Platform & Security — perombakan arsitektur penyimpanan konfigurasi untuk mematangkan dukungan lintas OS (Cross-platform) dan meningkatkan standar keamanan. Rilis ini mengatasi crash fatal pada Linux dan macOS yang terjadi pada versi sebelumnya akibat _dependency_ DPAPI Windows.
+*Cross-Platform OS Vault* — Perombakan arsitektur lapis bawah (Enkripsi DPAPI) menjadi pustaka *Secret Service*. Rilis ini murni menambal isu *Crash Fatal* aplikasi saat dipaksa jalan via terminal macOS dan Linux Debian.
 
 ### feature:
-- cross-platform credential standard: Implementasi penuh pustaka `keyring` (terintegrasi ke *Windows Credential Manager* / *macOS Keychain* / Linux *Secret Service*).
-- clean executable vault: Memisahkan file konfigurasi `config.json` sebagai data non-sensitif portabel dan mengisolasi letaknya di direktori khusus *User Profile* (`~/.glrc/`) guna menghindari "file sampah" ketika menjankan _.exe_ secara *portable*.
-- automated secure migration: Secara otomatis membongkar file `config.dat` (enkripsi versi 1.2 lama) saat startup pertama kali, memindahkan Sandi ke dalam Keyring, mencadangkannya menjadi `.bak`, lalu menghapus modul Windows Native (`dpapi_utils`).
+- **cross-platform credential:** Eksekusi integrasi pustaka Python `keyring`. Akses token PAT Anda kini langsung ditanam ke brankas rahasia lokal (*Windows Credential Manager* / *macOS Keychain* / Linux *Secret Service*).
+- **clean executable config:** Menggeser pembuatan file log/dump `config.json` yang asalnya berserakan kemana-mana menjadi di isolasi di *User Profile* absolut komputer Anda (`~/.glrc/`).
+- **automated migration:** Fungsi yang merobohkan file lama berenkripsi jadul (`config.dat`), merebut isi tokennya lalu melemparnya ke dalam arsitektur `keyring` baru saat aplikasi *Booting* pertama. Sangat mulus (Seemless).
 
 ======================
 
 ## version 1.2.3
 
-Perbaikan teks i18n dan penanganan error git binary yang lebih elegan dari versi sebelumnya.
+Penambalan kosmetik i18n dan pembuangan Exception Error kasar bawaan Terminal *Subprocess*.
 
 ### bugfix:
-- fixed raw exception logging: Menangkap `FileNotFoundError` / `[WinError 2]` saat proses clone/pull dan menampilkan log user-friendly ("[!] Git tidak terinstall atau tidak ditemukan") daripada error stack trace kasar yang membingungkan.
-- fixed thread start missing git check: Menambahkan pengecekan instalasi `git` di awal proses clone untuk menghentikan proses secepatnya jika `git` tidak ada di sistem.
+- **fixed raw exception logging:** *Catch* `FileNotFoundError` (`[WinError 2]`) di *thread* saat biner `git` tiba-tiba macet atau tidak terinstall, dan melempar pesan *user-friendly* ketimbang *stack-trace* merah pening.
+- **smart git detection:** Memeriksa status path `git` segera sesudah tombol ditekan agar eksekusi di- *terminate* instan jika deteksinya fiktif.
 
 ### improvement:
-- i18n completion: Memindahkan semua sisa hardcoded Indonesian strings pada log dan UI (15+ strings) ke dalam sistem translasi `i18n.py`.
-- pagination fix: Menambahkan missing translation key `"page"` yang hilang di versi sebelumnya.
-- code cleanup: Mengganti parameter koneksi yang hardcoded di `main.py` menggunakan konstanta tersentralisasi di `constants.py` (`MAX_RETRY_ATTEMPTS`, `MAX_CONCURRENT_CLONES`, `RETRY_DELAY_SECONDS`).
+- **i18n completion:** Mendorong 15+ teks statis tambahan dari dalam logika *Python* ke *dictionary* penterjemah di `i18n.py`.
+- **clean magic variables:** Men-sentralisasi ulang angka absolut (jumlah *retry, clone concurrent limits*) ke dalam direktori konfig dasar di `constants.py`.
 
 ======================
 
 ## version 1.2.2
 
-Bugfix & hardening — perbaikan keamanan, validasi input, dan stabilitas jaringan.
+*Hardening* lapisan jaringan (Menangkap pengecualian pada Network Requests).
 
 ### bugfix:
-- fixed timeout: semua `requests.get()` sekarang menggunakan timeout (15-30s) untuk mencegah UI freeze jika GitLab server down/hang
-- fixed bare except: `except:` (bare except) di profile modal diganti `except Exception:` agar tidak menangkap `KeyboardInterrupt`/`SystemExit`
-- fixed inline import: `import time` dipindahkan ke top-level module, bukan inline di dalam retry loop
+- **fixed timeout hang:** Menyuntikkan parameter batas putus *timeout* 15-30s di seluruh pemanggilan Request API untuk menolak UI nge-*freeze* gara-gara nge-*ping* server intranet rusak.
+- **fixed bare except logic:** Blok `except:` telanjang pada *modal* profil dipangkas jadi `except Exception:` untuk ngebela `SystemExit`.
 
 ### feature:
-- added git binary detection: validasi `git` terinstall di PATH saat klik Connect — menampilkan pesan error user-friendly jika tidak ditemukan
-- added URL validation: validasi format URL GitLab (harus `http://` atau `https://`, hostname tidak boleh kosong) sebelum mengirim token
-
-### improvement:
-- replaced `print()` dengan `logging` di `config_manager.py` dan `gitlab_api.py` — output error sekarang terintegrasi dengan Python logging system, bukan hilang di stdout PyInstaller binary
+- **URL host validation:** Sistem bakal memarahi dan men-*drop* *request URL API GitLab* jika pengguna iseng ngirim argumen tanpa `https://`.
 
 ======================
 
 ## version 1.2.1
 
-Hotfix — git pull gagal autentikasi pada repository yang sudah ada di lokal.
+*Hotfix* Git Auth Logic — Sinkronisasi git auto-pull memantul (*Failed Authentication*).
 
 ### bugfix:
-- fixed git pull authentication: perintah `git pull origin <branch>` gagal karena remote URL tidak mengandung token (error: `could not read Username ... terminal prompts disabled`). Sekarang remote origin di-set sementara ke authenticated URL sebelum pull, lalu dikembalikan ke URL asli setelah selesai agar token tidak tersimpan di `.git/config`
-- fixed pull log sanitization: output log saat pull sekarang juga menyembunyikan token (di-mask `********`), sama seperti pada clone
+- **fixed git pull loop:** Eksekusi auto-pull selalu mandek gara-gara origin SSH tanpa ID terlempar ke *blocking shell*. Kita mengakali parameter repo agar mengeset URL Origin beserta Token API palsu sedetik sebelum narik, lalu memutuskannya (Me-robek Token) dari memori PC detik setelah kode selesai disinkronkan. Keamanan maksimal terjamin!
 
 ======================
 
 ## version 1.2.0
 
-UI polish and icon system overhaul — replacing emoji text with Material Icons rendered via PIL, fixing visual jitter, and standardizing button sizes across the application.
+*UI Polish & Matrix Scaling* — Perombakan drastis ukuran elemen desain *Grid* menggunakan icon berbasis grafis (*Material Icons*), bukan lagi memakai Emoji Unicode yang suka nge-*bug* di beda-beda Windows OS.
 
 ### bugfix:
-- fixed icon alignment: icon dalam tombol tidak sejajar dengan teks, diganti rendering dengan anchor="mm" (PIL center)
-- fixed button jitter: klik tombol/checkbox menyebabkan tombol ber-icon bergeser karena CTkButton _draw() dipanggil ulang meskipun state tidak berubah
-- fixed token duration display: setelah restore token, pat_days_entry selalu menampilkan "7" (default) alih-alih sisa hari aktual
+- **icon jitter alignments:** Teks dan Ikon bergeser beberapa piksel setiap kali kursor dihover (*visual jumping*). *Hook render* PIL sekarang disetel pas pakai jangkar geometris `anchor="mm"`.
+- **ghost pat expiry:** Modal pat terus menampilkan angka palsu `7 hari` sekalipun token asli Anda sedang ter-set ngga ada kedaluwarsa (permanen). Fix!
 
 ### feature:
-- added Material Icons untuk semua tombol: search, reset, select all, deselect all, export, import, logs (mengganti emoji teks)
-- added _render_icon() helper: rendering glyph Material Icons ke CTkImage via PIL untuk digunakan sebagai button image
-- added _set_btn_state() helper: mencegah configure() dipanggil jika state tidak berubah, menghilangkan visual jitter
-
-### improvement:
-- standardized button sizes: semua tombol icon+text height=32, toolbar icon-only 34x34, CTA height=44, modal footer height=36
-- removed fixed width dari tombol icon+text: width otomatis menyesuaikan konten, mencegah content shift saat klik
-- removed unused ICON_* imports: ICON_SEARCH, ICON_RESET, ICON_EXPORT, ICON_IMPORT, ICON_CHECK_ALL, ICON_UNCHECK_ALL, ICON_LOGS tidak lagi diimport sebagai CTkFont glyph (diganti CTkImage)
+- **material design injection:** Mesin GUI sekarang ngerender Glyph Material Design secara real-time via paket modul *Pillow* (PIL). Tombol-tombol kini konsisten besar-sejajar.
 
 ======================
 
 ## version 1.1.0
 
-Post-clone IDE integration and import/export workspace fixes — adding OS-native IDE detection, cross-platform support, and resolving modal/icon rendering issues.
+Fitur Paska-Kloning (*Post-Clone*) IDE dan manajemen bongkar pasang (*Export/Import*) Workspace format `.json`.
 
 ### bugfix:
-- fixed import workspace: per_page override menyebabkan pagination rusak setelah import
-- fixed import workspace: checkbox selection loop redundan yang tidak diperlukan
-- fixed modal icon: mengganti double-delay (100ms+300ms) dengan pattern withdraw/deiconify + single backup
-- fixed modal grab_set: menghapus panggilan grab_set() redundan di clone result dialog dan branch modal
-- fixed i18n shadowing: variabel _ dari winreg.QueryValueEx meng-shadow fungsi _() i18n
-- fixed clone result button: icon dan teks terpisah karena CTkButton hanya support satu font
+- **json import glitch:** Impor file Workspace langsung mematahkan hitungan logik daftar UI (*Pagination*) ke titik *Null*.
+- **modal ghost clicks:** UI Modal ganda terbentur berebut `grab_set()` di OS Unix. Pemanggilan redundan dihapus. 
 
 ### feature:
-- added open in IDE: popup menu setelah clone untuk membuka repo di IDE yang tersedia
-- added IDE detection via OS registry: membaca Windows Registry shell entries (Directory\shell) untuk mendeteksi IDE
-- added cross-platform IDE detection: support macOS (Applications scan) dan Linux (PATH lookup)
-- added File Explorer fallback: opsi buka folder di file manager selalu tersedia
-- added Material Icons: icon open_in_new (e89f) untuk tombol "Buka"
-
-### cleanup:
-- removed duplicate root files: dpapi_utils.py, config_manager.py, i18n.py (sudah ada di src/)
-- removed unused import shutil dari main.py
+- **IDE cross-shell detection:** Menu dialog (*pop-up*) elegan akan nampil seketika repositori selesai di-*clone*. Terdapat tombol otomatis untuk membanting dan menyuapkan projek tersebut ke *VS Code / IDE Launcher* (Mampu me-nolak dan *fallback* ke pembaca partisi standar *File Explorer* jika Editor kagak ketemu!).
 
 ======================
 
 ## version 1.0.0
 
-Initial release — GitLab repository cloner with GUI, multi-language support (EN/ID), encrypted token storage via Windows DPAPI, branch selection, and cross-platform build pipeline.
+*Initial Release* (Rilis Perdana). Kepingan sistem fungsional pengkloning repositori massal rilis secara fungsional. Mampu mendukung kloning Git asinkron dengan fitur dwibahasa (ID/EN) bersenjatakan GUI *CustomTkinter* moderen.

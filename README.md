@@ -1,92 +1,103 @@
 <div align="center">
-  <img src="assets/icons/logo.png" alt="GLRC Logo" width="128" height="128" />
+  <img src="assets/icons/logo.png" alt="Logo GLRC" width="128" height="128" />
   <h1>GLRC: GitLab Repo Cloner</h1>
-  <p><strong>Cross-platform desktop app to batch clone, update, and manage GitLab repositories.</strong></p>
+  <p><strong>Aplikasi desktop lintas platform (GUI-based) untuk menjalankan <i>Batch Clone</i> dan <i>Auto-Pull</i> massal ratusan repositori GitLab secara serempak.</strong></p>
 
   <p>
-    <a href="README.md">English</a> • <a href="README_id.md">Bahasa Indonesia</a>
+    <a href="README.md">🇮🇩 Bahasa Indonesia (ID)</a> • <a href="README_en.md">🇬🇧 English (EN)</a>
   </p>
 
   <p>
     <img src="https://img.shields.io/badge/python-%E2%89%A53.10-blue?logo=python&logoColor=white" alt="Python 3.10+" />
     <img src="https://img.shields.io/badge/GUI-CustomTkinter-blueviolet" alt="GUI: CustomTkinter" />
-    <img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT" />
-    <img src="https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey" alt="Cross-Platform" />
-    <img src="https://img.shields.io/badge/i18n-English%20%7C%20Indonesian-orange" alt="Bilingual" />
+    <img src="https://img.shields.io/badge/Lisensi-MIT-green" alt="License: MIT" />
+    <img src="https://img.shields.io/badge/Platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey" alt="Cross Platform" />
   </p>
 </div>
 
-## Overview
+---
 
-GLRC is built for teams that handle many GitLab repositories and need fast, repeatable operations from one desktop interface.
+## 📌 Apa itu GLRC?
 
-Core flow:
-1. Connect to GitLab using Personal Access Token.
-2. Fetch/search repositories with pagination.
-3. Select repositories and branch strategy.
-4. Execute concurrent clone or auto-pull.
+**GLRC** dibangun khusus untuk *Software Engineer* dan tim *DevOps* yang harus meng-handle banyak repositori GitLab lokal (arsitektur Microservices). Daripada harus membuka terminal dan mengetik `git clone` atau `git pull` secara manual per folder, GLRC menghadirkan UI *dashboard* sederhana untuk mengatur sinkronisasi kode dalam satu ritme (*Batch Execution*).
 
-## Key Features
+## 🛠️ Fitur Utama
 
-- Batch repository selection and concurrent execution.
-- Smart auto-pull for existing local repositories.
-- HTTPS or SSH clone mode.
-- Retry mechanism for intermittent failures.
-- Workspace export/import (`.json`).
-- Bilingual UI (`en`, `id`).
-- Theme options (System, Light, Dark).
-- Packaged standalone binaries via PyInstaller.
+*   🚀 **Asynchronous Batch Execution:** Memanfaatkan *Threading* untuk memproses clone/pull puluhan repositori secara paralel tanpa bikin UI nge-*freeze*. Kinerja *bandwidth* koneksi akan dimaksimalkan penuh.
+*   🛡️ **OS Native Keystore (Vault Integration):** Token API GitLab (PAT) Anda tidak disimpan di file sembarangan. GLRC langsung menyuntikkannya ke dalam pengelola kredensial bawaan (*Windows Credential Manager*, *Linux Secret Service*, *macOS Keychain*).
+*   🤖 **State-Aware Git Operations (Auto-Pull):** GLRC cukup cerdas mengetahui apakah sebuah folder/repo sudah terinstal. Jika belum, ia melakukan `git clone`. Jika foler `.git` sudah ada, GLRC otomatis nge-*switch* mode menjadi `git pull --ff-only` untuk update kode terbaru.
+*   🎒 **JSON Workspace Export:** Simpan list repositori yang sudah di-checklist menjadi file *Workspace* berformat `.json` agar praktis dibagikan ke anggota tim untuk standardisasi folder kerja.
+*   🌐 **Agnostic URL Mode**: Mendukung injeksi *link* **HTTPS** konvensional maupun lewat **SSH** (syarat: *ssh-agent* sudah terkonfigurasi pada mesin Anda).
 
-## Quick Start
+---
 
-1. Create and activate a virtual environment.
-   ```bash
-   python -m venv .venv
-   # Windows
-   .venv\Scripts\activate
-   # macOS/Linux
-   source .venv/bin/activate
-   ```
-2. Install dependencies.
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Run application.
-   ```bash
-   python main.py
-   ```
+## 📖 Cara Penggunaan (*Quick Start*)
 
-## Build
+### Tahap 1: Hubungkan Akun (Setup Kredensial)
+*   **GitLab URI:** Masukkan URL GitLab server perusahaan/pribadi Anda (Contoh: `https://gitlab.com` atau `https://gitlab.kantor-anda.com`).
+*   **Personal Access Token (PAT):** Jangan gunakan *password* aslinya! Generate PAT baru di menu **Preferences > Access Tokens** akun GitLab dengan akses (*scope*) `api` dan `read_repository`. 
 
-Build scripts use a unified cross-platform pipeline (`scripts/build.py`).
+### Tahap 2: Tarik & Eksekusi Lapangan
+1.  **Target Folder:** Tentukan *path* destinasi absolut (Contoh: `D:\Workspaces\Backend`).
+2.  **Filter Repositori:** Tarik list repo dari server dan filter berdasarkan kata kunci/nama regex.
+3.  **Eksekusi:** Centang repo yang diinginkan, pilih target *Branch*, lalu hantam tombol *Execute*. Pantau log eksekusinya langsung melalui antarmuka konsol bawaan.
 
-- Windows:
-  - `build.bat`
-  - `build.bat en`
-  - `build.bat id`
-- Linux/macOS:
-  - `./build.sh`
-  - `./build.sh en`
-  - `./build.sh id`
+---
 
-Output is generated in `dist/`.
+## 💻 Panduan Menjalankan Source Code (*Local Development*)
 
-## Release Assets
+Jika Anda developer Python dan ingin merombak fitur aplikasi ini secara lokal:
 
-Release assets are published for:
-- Windows: `glrc-en-windows.exe`, `glrc-id-windows.exe`
-- Linux: `glrc-en-linux`, `glrc-id-linux`
-- macOS: `glrc-en-macos`, `glrc-id-macos`
+**Prerequisites:**
+- Python versi 3.10+
+- Git terinstall (*environment variables* `PATH` Git sudah valid)
 
-## Project Structure
+```bash
+# 1. Clone source code
+git clone https://github.com/aryajava/glrc.git
+cd glrc
 
-- `main.py`: GUI entry point.
-- `src/`: core modules, utilities, constants.
-- `assets/fonts/`: bundled fonts.
-- `assets/icons/`: app icons/logos.
-- `scripts/`: build/icon helper scripts.
-- `.github/workflows/`: CI/release automation.
+# 2. Setup Virtual Environment (Venv)
+python -m venv .venv
+# [Windows]
+.venv\Scripts\activate
+# [Unix/macOS]
+source .venv/bin/activate
 
-## License
+# 3. Install dependencies
+pip install -r requirements.txt
 
-Distributed under the [MIT License](LICENSE).
+# 4. Jalankan aplikasi GUI
+python main.py
+```
+
+---
+
+## 📦 Pipa Build Aplikasi (*Bundling Executable*)
+
+Proses *build* menjadi *Standalone Executable* ditenagai oleh mesin *PyInstaller*. Semua hasil biner (File `.exe` / Unix Binary) akan terlempar ke dalam direktori `/dist/`.
+
+**Build di atas OS Windows:**
+```cmd
+build.bat       # Build biner untuk bahasa EN dan ID sekaligus
+build.bat id    # Hanya build versi ID
+```
+
+**Build di atas Linux/macOS:**
+```bash
+./build.sh      # Build untuk EN dan ID sekaligus
+./build.sh en   # Hanya build versi EN
+```
+
+---
+
+## 🤝 Aturan dan Kontribusi
+Silakan merujuk ke dokumen di bawah sebelum melakukan *Pull Request* atau menambah arsitektur kode ke dalam repositori ini:
+
+*   📖 **[Aturan Kontribusi & Pull Request (CONTRIBUTING.md)](CONTRIBUTING.md)**
+*   🛡️ **[Kebijakan Keamanan Kredensial (SECURITY.md)](SECURITY.md)**
+*   🗺️ **[Struktur Arsitektur Projek (STRUCTURE.md)](STRUCTURE.md)**
+
+## 📄 Payung Hukum (Lisensi)
+
+Perangkat lunak ini didistribusikan di bawah payung **[MIT License](LICENSE)**. Bebas komersialisasi dan pendistribusian terbuka.

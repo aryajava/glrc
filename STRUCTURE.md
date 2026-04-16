@@ -5,15 +5,14 @@
 ```
 MyRepoManager/
 ├── src/                          # Source code utama (modular)
-│   ├── __init__.py              # Package initialization
+│   ├── __init__.py              # Inisialisasi Paket
 │   ├── constants.py             # Konstanta aplikasi (icons, dimensions, dll)
 │   │
-│   ├── core/                    # Business logic layer
+│   ├── core/                    # Lapisan Dasar Bisnis (Business logic layer)
 │   │   ├── __init__.py
-│   │   ├── config_manager.py   # Mengelola konfigurasi terenkripsi
-│   │   ├── dpapi_utils.py      # Windows DPAPI encryption utilities
-│   │   ├── gitlab_api.py       # GitLab API operations
-│   │   └── git_operations.py   # Git operations (clone, pull, checkout)
+│   │   ├── config_manager.py   # Mengelola konfigurasi dan brankas sandi (Keyring)
+│   │   ├── gitlab_api.py       # Operasi jaringan API ke server GitLab
+│   │   └── git_operations.py   # Eksekusi sinkronisasi Git (clone, pull, checkout)
 │   │
 │   ├── ui/                      # UI components (future expansion)
 │   │   └── __init__.py
