@@ -240,15 +240,19 @@ class GLRCApp(ctk.CTk):
         modal.protocol("WM_DELETE_WINDOW", close_action)
         modal.bind("<Escape>", lambda event: close_action())
 
-        # Apply icon before showing — no visible flicker
-        self.apply_window_icon(modal)
-
-        modal.deiconify()  # Show fully configured window
-        self.activate_window(modal)
-        # Single backup for CTkToplevel internal callbacks (~150ms)
-        modal.after(200, lambda: self.apply_window_icon(modal))
-        if use_grab:
-            modal.grab_set()
+        def _show_modal():
+            try:
+                self.apply_window_icon(modal)
+                modal.deiconify()
+                self.activate_window(modal)
+                if use_grab:
+                    modal.grab_set()
+                modal.after(200, lambda: self.apply_window_icon(modal))
+            except Exception:
+                pass
+                
+        # Jadwal deiconify di akhir event queue (15ms lag) agar widget sempat ter-render secara utuh
+        modal.after(15, _show_modal)
 
     def reset_to_login_size(self):
         self.geometry(f"{self.login_w}x{self.login_h}")

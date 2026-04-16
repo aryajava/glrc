@@ -224,6 +224,8 @@ def build_one(repo_root: Path, lang: str, app_name: str) -> None:
         "--windowed",
         "--name",
         app_name,
+        "--copy-metadata", "keyring",
+        "--hidden-import", "keyrings.alt",
     ]
 
     icon_file = pick_icon_file(repo_root)

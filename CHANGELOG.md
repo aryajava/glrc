@@ -4,6 +4,17 @@ All notable changes to GLRC (GitLab Repo Cloner) will be documented in this file
 
 ======================
 
+## version 1.3.1
+
+Hotfix kompilasi PyInstaller dan perbaikan rendering antarmuka pengguna *(UI rendering)* peninggalan versi 1.3.0. 
+
+### bugfix:
+- pyinstaller keyring bug: Menambahkan flag ekstensif `--copy-metadata keyring` dan `--hidden-import keyrings.alt` ke skrip *bundler* `build.py` untuk menggaransi berjalannya fitur kredensial pada distribusi *binary*.
+- portable absolute pathing: Memodifikasi skrip migrasi agar mendeteksi letak sesungguhnya dari `glrc.exe` menggunakan metode `sys.executable` alih-alih `cwd`, menjaga migrasi `config.dat` versi lawas agar selalu stabil.
+- modal icon flickering: Menambahkan _delay timing rendering_ yang memaksa sistem menunda sinkronisasi pemunculan (_deiconify_) kotak dialog (modal) sebesar ~15ms hingga widget benar-benar rampung termuat. Ini menuntaskan isu *tearing* / keterlambatan ikon aplikasi pada semua kotak modal.
+
+======================
+
 ## version 1.3.0
 
 Cross-Platform & Security — perombakan arsitektur penyimpanan konfigurasi untuk mematangkan dukungan lintas OS (Cross-platform) dan meningkatkan standar keamanan. Rilis ini mengatasi crash fatal pada Linux dan macOS yang terjadi pada versi sebelumnya akibat _dependency_ DPAPI Windows.

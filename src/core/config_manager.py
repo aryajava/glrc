@@ -9,7 +9,14 @@ logger = logging.getLogger("glrc")
 
 CONFIG_DIR = Path.home() / ".glrc"
 CONFIG_FILE = CONFIG_DIR / "config.json"
-OLD_CONFIG_FILE = "config.dat"
+
+import sys
+if getattr(sys, 'frozen', False):
+    _base_dir = Path(sys.executable).parent
+else:
+    _base_dir = Path(os.path.abspath(os.path.dirname(sys.argv[0])))
+
+OLD_CONFIG_FILE = _base_dir / "config.dat"
 
 SERVICE_NAME = "GLRC_App"
 USERNAME = "gitlab_token"
