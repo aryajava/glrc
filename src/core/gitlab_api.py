@@ -118,9 +118,10 @@ class GitLabAPI:
     def validate_projects(self, project_paths: set) -> tuple[list, list]:
         """
         Memvalidasi sekumpulan project path dengan melakukan ping ke GitLab API.
+        Jika path persis tidak ditemukan, akan mencoba melakukan pencarian berdasarkan nama repo.
         
         Args:
-            project_paths: Set of project paths (e.g. 'group/subgroup/project')
+            project_paths: Set of project paths (e.g. 'group/subgroup/project' or 'project_name')
             
         Returns:
             Tuple dari (valid_projects, invalid_projects)
@@ -130,9 +131,9 @@ class GitLabAPI:
         invalid_projects = []
         
         for path in project_paths:
-            # Endpoint GitLab menerima URL encoded path
             encoded_path = urllib.parse.quote_plus(path)
             try:
+                # 1. Coba hit endpoint spesifik (jika input adalah full path/id yang valid)
                 resp = requests.get(
                     f"{self.gitlab_url}/api/v4/projects/{encoded_path}",
                     headers=self.headers,
@@ -140,8 +141,29 @@ class GitLabAPI:
                 )
                 if resp.status_code == 200:
                     valid_projects.append(resp.json())
-                else:
-                    invalid_projects.append(path)
+                    continue
+                
+                # 2. Jika gagal (misal user hanya input nama repo tanpa namespace), coba search
+                search_resp = requests.get(
+                    f"{self.gitlab_url}/api/v4/projects?search={urllib.parse.quote(path)}&simple=true",
+                    headers=self.headers,
+                    timeout=10
+                )
+                if search_resp.status_code == 200:
+                    results = search_resp.json()
+                    found = False
+                    for proj in results:
+                        # Cocokkan nama atau path agar akurat
+                        if proj.get('path') == path or proj.get('name') == path or proj.get('path_with_namespace') == path:
+                            valid_projects.append(proj)
+                            found = True
+                            break
+                    
+                    if found:
+                        continue
+                
+                # Jika sama sekali tidak ditemukan
+                invalid_projects.append(path)
             except Exception as e:
                 logger.warning(f"Error validating project {path}: {e}")
                 invalid_projects.append(path)

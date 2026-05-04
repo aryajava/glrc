@@ -4,14 +4,37 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
 
 ======================
 
+## version 1.4.4
+
+*Hotfix* untuk isu *runtime error* pada Workspace Tools.
+
+### bugfix & enhancement:
+- **Generate Workspace:** 
+  1. Memperbaiki dua `AttributeError` beruntun terkait fungsi *logging* (`update_log_threadsafe` diganti menjadi `write_log`) dan instansiasi `GitLabAPI` (`self.api`) yang mencegah proses berjalan.
+  2. **Smart Search Fallback**: `Generate Workspace` kini bisa menerima *input* berupa **nama repositori saja** tanpa *namespace* (contoh: `msf_posting_maintenance`). Jika *path* tidak valid secara absolut, API akan otomatis melakukan pencarian pintar dan memilih repositori dengan nama yang persis sama.
+
+======================
+
+## version 1.4.3
+
+*Hotfix* untuk isu antarmuka (UI) sisa dari *patch* lawas terkait berkedipnya ikon pada jendela aplikasi sekunder.
+
+### bugfix:
+- **modal icon flickering:** Memperbaiki masalah *icon flickering* tanpa menggunakan metode *withdraw* maupun *delay* `after()`. Kini aplikasi langsung menerapkan *favicon* sejak awal dan melakukan *intercept* (*override*) terhadap metode internal bawaan `CustomTkinter` agar tidak bisa menimpa kembali *favicon* tersebut dengan ikon *default* Tkinter. Jendela *modal* akan langsung tampil instan tanpa *flicker* maupun jeda (*delay*).
+
+======================
+
 ## version 1.4.2
 
 *Workspace Tools Stability* — Patch untuk menstabilkan modal Workspace Tools dan mencegah aplikasi terasa terkunci saat operasi workspace dijalankan.
 
 ### bugfix:
 - **Modal Lifecycle:** Tombol Import/Export tidak lagi menghancurkan modal Workspace Tools sebelum file dialog dibuka, sehingga modal tidak tampak hilang mendadak.
+- **Modal Visibility & Focus:** Memperbaiki kasus modal yang secara logika masih aktif tetapi tidak tampil/terangkat di layar, termasuk overlay profil yang tertinggal setelah ditekan `ESC`.
 - **UI Freeze Guard:** Proses Generate tidak lagi men-disable seluruh modal yang sedang memegang `grab_set()`. Aplikasi tetap responsif dengan status validasi dan tombol input yang dikunci sementara.
 - **Duplicate Modal Guard:** Klik berulang pada tombol Workspace Tools kini hanya memfokuskan modal yang sudah terbuka, bukan membuat beberapa modal yang saling berebut fokus.
+- **Thread-Safe UI Callback:** Callback dari proses background kini dijadwalkan dengan penjagaan mainloop agar aplikasi tidak memunculkan error saat window sudah ditutup atau thread selesai terlambat.
+- **Clone Workflow Polish:** Label repositori pada dark theme kini terbaca, tombol Clone kembali ke gaya normal setelah proses selesai, dan judul dialog pilih folder mengikuti sistem terjemahan.
 
 ======================
 

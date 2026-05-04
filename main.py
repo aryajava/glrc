@@ -213,46 +213,74 @@ class GLRCApp(ctk.CTk):
             self.pat_days_entry.configure(state="disabled")
 
     def activate_window(self, window):
-        try:
-            window.wait_visibility()
-        except Exception:
-            pass
-
         self.apply_window_icon(window)
 
+        def clear_topmost():
+            try:
+                if window.winfo_exists():
+                    window.attributes("-topmost", False)
+            except Exception:
+                pass
+
         try:
+            if hasattr(window, "deiconify"):
+                window.deiconify()
+            window.update_idletasks()
             window.lift()
             window.attributes("-topmost", True)
-            window.after(150, lambda: window.attributes("-topmost", False))
+            window.after(150, clear_topmost)
             window.focus_force()
         except Exception:
             pass
 
     def configure_modal_window(self, modal, width, height, on_escape=None, use_grab=True):
-        modal.withdraw()  # Hide while configuring
+        # Apply icon immediately
+        self.apply_window_icon(modal)
+        
+        # Override icon methods to prevent CustomTkinter's internal 200ms timer from reverting the icon
+        def dummy_icon_method(*args, **kwargs):
+            pass
+        try:
+            modal.iconbitmap = dummy_icon_method
+            modal.wm_iconbitmap = dummy_icon_method
+            modal.iconphoto = dummy_icon_method
+            modal.wm_iconphoto = dummy_icon_method
+        except Exception:
+            pass
 
         modal.geometry(f"{width}x{height}")
         modal.resizable(False, False)
         modal.transient(self)
         center_window(modal, width, height)
 
-        close_action = on_escape or modal.destroy
-        modal.protocol("WM_DELETE_WINDOW", close_action)
-        modal.bind("<Escape>", lambda event: close_action())
-
-        def _show_modal():
+        def release_modal_grab():
             try:
-                self.apply_window_icon(modal)
-                modal.deiconify()
-                self.activate_window(modal)
-                if use_grab:
-                    modal.grab_set()
-                modal.after(200, lambda: self.apply_window_icon(modal))
+                if modal.grab_current() == modal:
+                    modal.grab_release()
             except Exception:
                 pass
-                
-        # Jadwal deiconify di akhir event queue (15ms lag) agar widget sempat ter-render secara utuh
-        modal.after(15, _show_modal)
+
+        def close_action():
+            release_modal_grab()
+            if on_escape:
+                on_escape()
+            elif modal.winfo_exists():
+                modal.destroy()
+
+        def cleanup_on_destroy(_event=None):
+            release_modal_grab()
+
+        modal.protocol("WM_DELETE_WINDOW", close_action)
+        modal.bind("<Escape>", lambda event: close_action())
+        modal.bind("<Destroy>", cleanup_on_destroy, add="+")
+
+        # Activate window normally (deiconify, lift, topmost)
+        try:
+            self.activate_window(modal)
+            if use_grab:
+                modal.grab_set()
+        except Exception:
+            pass
 
     def reset_to_login_size(self):
         self.geometry(f"{self.login_w}x{self.login_h}")
@@ -280,6 +308,13 @@ class GLRCApp(ctk.CTk):
             button = getattr(self, button_name, None)
             if button is not None:
                 self._set_btn_state(button, state)
+
+    def schedule_ui(self, callback, delay=0):
+        try:
+            if self.winfo_exists():
+                self.after(delay, callback)
+        except (RuntimeError, tk.TclError):
+            logger.debug("Skipped UI callback because the main loop is no longer available.")
 
     def update_repo_range_label(self, displayed_count):
         if self.total_rows <= 0 or displayed_count <= 0:
@@ -627,7 +662,7 @@ class GLRCApp(ctk.CTk):
         self.update_selection_action_buttons()
 
     def browse_folder(self):
-        folder_selected = filedialog.askdirectory(title="Pilih Folder Destinasi")
+        folder_selected = filedialog.askdirectory(title=_("step1_title"))
         if folder_selected:
             self.dest_entry.delete(0, tk.END)
             self.dest_entry.insert(0, folder_selected)
@@ -695,7 +730,7 @@ class GLRCApp(ctk.CTk):
             self.user_name = ""
             self.user_email = ""
 
-        self.fetch_repositories()
+        self.fetch_repositories(search_query="", current_page=1, per_page=self.per_page)
 
     
     def validate_search_input(self, *args):
@@ -827,15 +862,26 @@ class GLRCApp(ctk.CTk):
     def load_page_data(self):
         self.set_ui_loading_state(True)
         self.page_label.configure(text=_("loading"))
-        thread = threading.Thread(target=self.fetch_repositories)
+        search_query = self.search_entry.get().strip()
+        current_page = self.current_page
+        per_page = self.per_page
+        thread = threading.Thread(
+            target=self.fetch_repositories,
+            kwargs={
+                "search_query": search_query,
+                "current_page": current_page,
+                "per_page": per_page,
+            }
+        )
         thread.daemon = True
         thread.start()
 
-    def fetch_repositories(self):
+    def fetch_repositories(self, search_query="", current_page=None, per_page=None):
         try:
             import fnmatch
             headers = {"PRIVATE-TOKEN": self.api_token}
-            search_query = self.search_entry.get().strip()
+            current_page = current_page or self.current_page
+            per_page = per_page or self.per_page
             is_wildcard = "*" in search_query
             
             all_projects = []
@@ -889,7 +935,7 @@ class GLRCApp(ctk.CTk):
                 api_url = (
                     f"{self.gitlab_url}/api/v4/projects"
                     f"?membership=true&simple=true"
-                    f"&per_page={self.per_page}&page={self.current_page}"
+                    f"&per_page={per_page}&page={current_page}"
                 )
                 response = requests.get(api_url, headers=headers, timeout=30)
                 response.raise_for_status()
@@ -902,21 +948,21 @@ class GLRCApp(ctk.CTk):
                 self.total_pages = int(total_pages) if total_pages.isdigit() else 1
                 self.cached_projects = projects_to_show
                 
-            if not projects_to_show and self.current_page == 1:
+            if not projects_to_show and current_page == 1:
                 msg = _("not_found")
-                self.after(0, lambda root=self: show_info(root, _("ok"), msg))
-                self.after(0, lambda: self.show_main_frame([], False))
-                self.after(0, lambda: self.connect_btn.configure(state="normal", text=_("connect_btn")))
-                self.after(0, lambda: self.set_ui_loading_state(False))
+                self.schedule_ui(lambda root=self: show_info(root, _("ok"), msg))
+                self.schedule_ui(lambda: self.show_main_frame([], False))
+                self.schedule_ui(lambda: self.connect_btn.configure(state="normal", text=_("connect_btn")))
+                self.schedule_ui(lambda: self.set_ui_loading_state(False))
                 return
 
-            self.after(0, lambda: self.show_main_frame(projects_to_show, self.current_page < self.total_pages))
+            self.schedule_ui(lambda: self.show_main_frame(projects_to_show, current_page < self.total_pages))
 
         except requests.exceptions.RequestException as e:
-            self.after(0, lambda root=self: show_error(root, _("fetching_error"), f"{_('error')}: {e}"))
-            self.after(0, lambda: self.connect_btn.configure(state="normal", text=_("connect_btn")))
-            self.after(0, lambda: self.page_label.configure(text=_("page_error", current_page=self.current_page)))
-            self.after(0, lambda: self.set_ui_loading_state(False))
+            self.schedule_ui(lambda root=self: show_error(root, _("fetching_error"), f"{_('error')}: {e}"))
+            self.schedule_ui(lambda: self.connect_btn.configure(state="normal", text=_("connect_btn")))
+            self.schedule_ui(lambda: self.page_label.configure(text=_("page_error", current_page=self.current_page)))
+            self.schedule_ui(lambda: self.set_ui_loading_state(False))
 
     def show_main_frame(self, projects, has_next):
         self.login_frame.pack_forget()
@@ -1266,15 +1312,18 @@ class GLRCApp(ctk.CTk):
             
             def _validate():
                 try:
-                    self.update_log_threadsafe(_("generate_validating"))
-                    valid, invalid = self.api.validate_projects(cleaned_paths)
-                    self.after(0, lambda: self._on_validation_complete(valid, invalid, total_lines, modal, set_generating))
+                    from src.core.gitlab_api import GitLabAPI
+                    api = GitLabAPI(self.gitlab_url, self.api_token)
+                    
+                    self.write_log(_("generate_validating"))
+                    valid, invalid = api.validate_projects(cleaned_paths)
+                    self.schedule_ui(lambda: self._on_validation_complete(valid, invalid, total_lines, modal, set_generating))
                 except Exception as e:
                     def _show_validation_error(err=e):
                         if modal.winfo_exists():
                             set_generating(False)
                             show_error(modal, _("error"), str(err))
-                    self.after(0, _show_validation_error)
+                    self.schedule_ui(_show_validation_error)
 
             thread = threading.Thread(target=_validate)
             thread.daemon = True
@@ -1425,7 +1474,7 @@ class GLRCApp(ctk.CTk):
                 self.log_window.textbox.insert("end", text + "\n")
                 self.log_window.textbox.see("end")
                 self.log_window.textbox.configure(state="disabled")
-        self.after(0, _update)
+        self.schedule_ui(_update)
 
     # =========================================================================
     # MODAL BRANCH SELECTION
@@ -1588,6 +1637,9 @@ class GLRCApp(ctk.CTk):
         headers = {"PRIVATE-TOKEN": self.api_token}
 
         for url, data in self.selected_repos.items():
+            if not modal.winfo_exists():
+                return
+
             project_id = data["id"]
             try:
                 branches = []
@@ -1613,10 +1665,14 @@ class GLRCApp(ctk.CTk):
             except Exception:
                 data["available_branches"] = ["main", "master"]
 
-        self.after(0, lambda: self.render_branch_rows(scroll_frame, action_btn, loading_lbl))
+        self.schedule_ui(lambda: self.render_branch_rows(modal, scroll_frame, action_btn, loading_lbl))
 
-    def render_branch_rows(self, scroll_frame, action_btn, loading_lbl):
-        loading_lbl.destroy()
+    def render_branch_rows(self, modal, scroll_frame, action_btn, loading_lbl):
+        if not (modal.winfo_exists() and scroll_frame.winfo_exists() and action_btn.winfo_exists()):
+            return
+
+        if loading_lbl.winfo_exists():
+            loading_lbl.destroy()
         action_btn.configure(state="normal")
 
         # MUST match COL_WIDTHS in open_branch_config_modal header
@@ -1638,7 +1694,7 @@ class GLRCApp(ctk.CTk):
             
             lbl = ctk.CTkLabel(
                 row, font=ctk.CTkFont(family="Open Sans", size=12, weight="bold"),
-                text=middle_truncate(name, 35), anchor="w", text_color="#34495e"
+                text=middle_truncate(name, 35), anchor="w", text_color=("gray20", "gray85")
             )
             lbl.grid(row=0, column=0, sticky="we", padx=(10, 4), pady=8)
             ToolTip(lbl, name)
@@ -1713,14 +1769,29 @@ class GLRCApp(ctk.CTk):
     def execute_clone_from_modal(self, modal):
         # 1. Validation for New Branch Name
         urls_to_clone = list(self.selected_repos.keys())
+        clone_jobs = []
         for url in urls_to_clone:
             data = self.selected_repos[url]
-            if data.get("new_branch_enabled") and data["new_branch_enabled"].get():
-                new_b_name = data.get("new_branch_name_var", tk.StringVar()).get().strip()
+            branch_var = data.get("selected_branch_var")
+            branch_name = branch_var.get().strip() if branch_var else "main"
+            new_branch_enabled = data.get("new_branch_enabled")
+            new_branch_name_var = data.get("new_branch_name_var")
+            create_new_branch = bool(new_branch_enabled and new_branch_enabled.get())
+            new_b_name = new_branch_name_var.get().strip() if new_branch_name_var else ""
+
+            if create_new_branch:
                 if not new_b_name:
                     repo_name = data.get("name", "Unknown")
                     show_error(modal, _("error"), _("new_branch_empty_err", repo_name=repo_name))
                     return
+
+            clone_jobs.append({
+                "url": url,
+                "repo_name": data.get("name", url.rstrip("/").split("/")[-1]),
+                "branch_name": branch_name or "main",
+                "create_new_branch": create_new_branch,
+                "new_branch_name": new_b_name,
+            })
 
         # 2. Disk Space Check
         dest_folder = self.dest_entry.get().strip()
@@ -1755,9 +1826,9 @@ class GLRCApp(ctk.CTk):
             self.clone_btn.configure(state="normal", text=_("step3_btn"), fg_color="#1a7f37", hover_color="#15692f", command=self.open_branch_selection_modal)
             return
 
-        self.write_log(_("start_clone_process", count=len(urls_to_clone)))
+        self.write_log(_("start_clone_process", count=len(clone_jobs)))
 
-        thread = threading.Thread(target=self.run_multiple_clones, args=(urls_to_clone, dest_folder))
+        thread = threading.Thread(target=self.run_multiple_clones, args=(clone_jobs, dest_folder))
         thread.daemon = True
         thread.start()
 
@@ -1766,31 +1837,35 @@ class GLRCApp(ctk.CTk):
         self.cancel_event.set()
         self.clone_btn.configure(state="disabled", text=_("canceling"))
 
-    def run_multiple_clones(self, urls, dest_folder):
+    def run_multiple_clones(self, clone_jobs, dest_folder):
         self.sukses = 0
         self.gagal = 0
         self.processed_count = 0
-        self.total_repos = len(urls)
+        self.total_repos = len(clone_jobs)
         self.cloned_paths = []  # Track successfully cloned/updated repos
         self.lock = threading.Lock()
         
         clone_method = self.config.get_clone_method()
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_CONCURRENT_CLONES) as executor:
-            futures = [executor.submit(self._process_single_repo, url, dest_folder, clone_method) for url in urls]
+            futures = [executor.submit(self._process_single_repo, job, dest_folder, clone_method) for job in clone_jobs]
             concurrent.futures.wait(futures)
 
         self.write_log(f"\n{'=' * 50}")
         self.write_log(_("process_finished", success=self.sukses, failed=self.gagal))
         self.write_log(f"{'=' * 50}")
 
-        self.after(0, lambda: self.clone_btn.configure(
-            state="normal", text=_("step3_btn")
+        self.schedule_ui(lambda: self.clone_btn.configure(
+            state="normal",
+            text=_("step3_btn"),
+            fg_color="#1a7f37",
+            hover_color="#15692f",
+            command=self.open_branch_selection_modal
         ))
         cloned = list(self.cloned_paths)
-        self.after(0, lambda: self.show_clone_result_dialog(cloned))
+        self.schedule_ui(lambda: self.show_clone_result_dialog(cloned))
 
-    def _process_single_repo(self, url, dest_folder, clone_method):
+    def _process_single_repo(self, clone_job, dest_folder, clone_method):
         if hasattr(self, 'cancel_event') and self.cancel_event.is_set():
             return
             
@@ -1798,14 +1873,11 @@ class GLRCApp(ctk.CTk):
             self.processed_count += 1
             current_idx = self.processed_count
             
-        repo_data = self.selected_repos[url]
-        repo_name = repo_data["name"]
-        branch_name = repo_data["selected_branch_var"].get()
-
-        new_branch_enabled = repo_data.get("new_branch_enabled")
-        new_branch_name_var = repo_data.get("new_branch_name_var")
-        create_new_branch = new_branch_enabled and new_branch_enabled.get()
-        new_branch_name = new_branch_name_var.get().strip() if new_branch_name_var else ""
+        url = clone_job["url"]
+        repo_name = clone_job["repo_name"]
+        branch_name = clone_job["branch_name"]
+        create_new_branch = clone_job["create_new_branch"]
+        new_branch_name = clone_job["new_branch_name"]
 
         # Tentukan nama folder repo (ambil segment terakhir dari URL)
         repo_folder_name = url.rstrip("/").split("/")[-1]

@@ -4,14 +4,37 @@ All algorithmic modifications, architectural restructurings, bugfixes, and featu
 
 ======================
 
+## version 1.4.4
+
+*Hotfix* for a runtime error in Workspace Tools.
+
+### bugfix & enhancement:
+- **Generate Workspace:** 
+  1. Fixed two consecutive `AttributeError` exceptions related to the logging function and `GitLabAPI` (`self.api`) instantiation.
+  2. **Smart Search Fallback**: The `Generate Workspace` input now accepts simple **repository names** without needing full namespaces (e.g. `msf_posting_maintenance`). If the exact path is invalid, the API will automatically perform a smart search and match the exact repository name.
+
+======================
+
+## version 1.4.3
+
+*Hotfix* addressing lingering user interface quirks concerning icon flickering on secondary modal windows.
+
+### bugfix:
+- **modal icon flickering:** Fixed the icon flickering issue without using the `withdraw` method or `after()` delays. The application now applies the favicon immediately upon creation and intercepts CustomTkinter's internal icon methods, preventing it from reverting to the default Tkinter icon. Modals will now load instantly without any flickering or delays.
+
+======================
+
 ## version 1.4.2
 
 *Workspace Tools Stability* — A patch to stabilize the Workspace Tools modal and prevent the app from feeling locked while workspace operations are running.
 
 ### bugfix:
 - **Modal Lifecycle:** Import/Export no longer destroys the Workspace Tools modal before opening file dialogs, so the modal does not appear to vanish unexpectedly.
+- **Modal Visibility & Focus:** Fixed cases where a modal remained logically active but did not render or raise on screen, including the profile overlay left behind after pressing `ESC`.
 - **UI Freeze Guard:** Generate no longer disables the whole grabbed modal. The app stays responsive while validation runs, with a visible status and temporarily locked input controls.
 - **Duplicate Modal Guard:** Repeated clicks on Workspace Tools now focus the existing modal instead of creating multiple focus-grabbing modals.
+- **Thread-Safe UI Callback:** Background process callbacks are now scheduled with mainloop guards so the app does not raise errors when a window has already closed or a worker finishes late.
+- **Clone Workflow Polish:** Repository labels are readable in dark theme, the Clone button returns to its normal style after completion, and the folder picker title now follows the translation system.
 
 ======================
 

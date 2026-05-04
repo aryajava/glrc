@@ -37,15 +37,20 @@ def _apply_dialog_icon(dialog, parent):
 
 def _activate_dialog(dialog):
     """Bring dialog to front consistently on Windows."""
-    try:
-        dialog.wait_visibility()
-    except Exception:
-        pass
+    def clear_topmost():
+        try:
+            if dialog.winfo_exists():
+                dialog.attributes("-topmost", False)
+        except Exception:
+            pass
 
     try:
+        if hasattr(dialog, "deiconify"):
+            dialog.deiconify()
+        dialog.update_idletasks()
         dialog.lift()
         dialog.attributes("-topmost", True)
-        dialog.after(150, lambda: dialog.attributes("-topmost", False))
+        dialog.after(150, clear_topmost)
         dialog.focus_force()
     except Exception:
         pass
@@ -79,11 +84,6 @@ def show_custom_message(parent, title, message, icon_type="info", is_confirmatio
     dialog.transient(parent)
     _apply_dialog_icon(dialog, parent)
 
-    dialog.deiconify()  # Show fully configured
-    _activate_dialog(dialog)
-    # Single backup for CTkToplevel internal callbacks (~150ms)
-    dialog.after(200, lambda: _apply_dialog_icon(dialog, parent))
-
     frame = ctk.CTkFrame(dialog, fg_color="transparent")
     frame.pack(fill="both", expand=True, padx=20, pady=(20, 10))
 
@@ -116,13 +116,23 @@ def show_custom_message(parent, title, message, icon_type="info", is_confirmatio
 
     result = [None]
 
+    def release_dialog_grab():
+        try:
+            if dialog.grab_current() == dialog:
+                dialog.grab_release()
+        except Exception:
+            pass
+
     def on_close(val=None):
+        release_dialog_grab()
         _active_messages.discard(msg_key)
         result[0] = val
-        dialog.destroy()
+        if dialog.winfo_exists():
+            dialog.destroy()
 
     dialog.protocol("WM_DELETE_WINDOW", lambda: on_close(False))
     dialog.bind("<Escape>", lambda event: on_close(False if is_confirmation else True))
+    dialog.bind("<Destroy>", lambda event: release_dialog_grab(), add="+")
 
     btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
     btn_frame.pack(pady=(0, 20))
@@ -136,6 +146,10 @@ def show_custom_message(parent, title, message, icon_type="info", is_confirmatio
         ctk.CTkButton(btn_frame, text="OK", width=120,
                      command=lambda: on_close(True)).pack()
 
+    dialog.deiconify()
+    _activate_dialog(dialog)
+    # Single backup for CTkToplevel internal callbacks (~150ms)
+    dialog.after(200, lambda d=dialog: d.winfo_exists() and _apply_dialog_icon(d, parent))
     dialog.grab_set()
     dialog.wait_window()
     return result[0]
