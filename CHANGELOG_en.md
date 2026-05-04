@@ -4,6 +4,15 @@ All algorithmic modifications, architectural restructurings, bugfixes, and featu
 
 ======================
 
+## version 1.4.1
+
+*Startup Hotfix* — A small patch to fix a crash when opening the application from the 1.4.0 release build.
+
+### bugfix:
+- **Workspace Tools Startup Crash:** Fixed the action button state updater still referencing the old `btn_export` button after export was moved into the *Workspace Tools* modal in 1.4.0. The app no longer fails at startup with `_tkinter.tkapp object has no attribute 'btn_export'`.
+
+======================
+
 ## version 1.4.0
 
 *UX & Clone Control* — A massive user interface revamp introducing streamlined workspace tools, active clone monitoring, and safe real-time background task cancellation.

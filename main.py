@@ -272,9 +272,14 @@ class GLRCApp(ctk.CTk):
         has_repos = bool(self.repo_items)
         has_selection = bool(self.selected_repos)
 
-        self._set_btn_state(self.btn_select_all, "normal" if has_repos else "disabled")
-        self._set_btn_state(self.btn_deselect_all, "normal" if has_repos else "disabled")
-        self._set_btn_state(self.btn_export, "normal" if has_selection else "disabled")
+        for button_name, state in (
+            ("btn_select_all", "normal" if has_repos else "disabled"),
+            ("btn_deselect_all", "normal" if has_repos else "disabled"),
+            ("btn_export", "normal" if has_selection else "disabled"),
+        ):
+            button = getattr(self, button_name, None)
+            if button is not None:
+                self._set_btn_state(button, state)
 
     def update_repo_range_label(self, displayed_count):
         if self.total_rows <= 0 or displayed_count <= 0:

@@ -4,6 +4,15 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
 
 ======================
 
+## version 1.4.1
+
+*Startup Hotfix* — Patch kecil untuk memperbaiki crash saat aplikasi dibuka dari build release 1.4.0.
+
+### bugfix:
+- **Workspace Tools Startup Crash:** Memperbaiki pemanggilan status tombol `btn_export` yang masih mengarah ke tombol lama, sementara pada 1.4.0 export sudah dipindahkan ke modal *Workspace Tools*. Aplikasi tidak lagi gagal start dengan error `_tkinter.tkapp object has no attribute 'btn_export'`.
+
+======================
+
 ## version 1.4.0
 
 *UX & Clone Control* — Pembaruan masif pada antarmuka pengguna untuk interaksi *Workspace* yang lebih praktis serta pemantauan kloning repositori yang sangat informatif dan bisa dibatalkan secara *real-time*.
