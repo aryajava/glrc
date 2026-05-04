@@ -4,6 +4,19 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
 
 ======================
 
+## version 1.5.0
+
+*Workspace Tools Maturation* — Pembaruan fitur untuk mematangkan utilitas Workspace Tools dengan berbagai fungsi produktivitas.
+
+### enhancement:
+- **Find & Replace:** Menambahkan frame baru di bawah teks input untuk mencari dan mengganti teks (contoh: menghapus suffix `-sit` dari daftar repo).
+- **Format & Clean:** Menambahkan tombol untuk merapikan teks secara instan (mengurutkan abjad, menghapus baris kosong, dan menghapus duplikat) sebelum divalidasi.
+- **Clear All:** Tombol cepat untuk mengosongkan teks input.
+- **Bulk Import from File:** Mendukung impor daftar repositori langsung dari file `.txt`, `.csv`, dan `.xlsx` (Excel) ke dalam kotak input.
+- **Validation Preview:** Kini aplikasi menampilkan jendela dialog berisi rangkuman validasi (berapa banyak repo yang valid dan invalid) dan meminta persetujuan sebelum file JSON disimpan.
+
+======================
+
 ## version 1.4.5
 
 *Branch Configuration Selection Hotfix* — Patch untuk memastikan modal Branch Configuration selalu memakai daftar repositori yang benar-benar dipilih pengguna.

@@ -1272,7 +1272,7 @@ class GLRCApp(ctk.CTk):
                 modal.destroy()
             self.workspace_tools_modal = None
 
-        self.configure_modal_window(modal, 550, 500, on_escape=close_workspace_tools)
+        self.configure_modal_window(modal, 550, 680, on_escape=close_workspace_tools)
 
         ctk.CTkLabel(modal, text=_("workspace_tools_title"), font=ctk.CTkFont(family="Open Sans", size=18, weight="bold")).pack(pady=(20, 10))
 
@@ -1301,8 +1301,121 @@ class GLRCApp(ctk.CTk):
         ctk.CTkLabel(modal, text=_("workspace_generate"), font=ctk.CTkFont(family="Open Sans", size=14, weight="bold")).pack(pady=(0, 5))
         ctk.CTkLabel(modal, text=_("generate_ws_desc"), wraplength=450, text_color="gray70").pack(pady=(0, 10))
 
-        text_input = ctk.CTkTextbox(modal, height=150)
-        text_input.pack(fill="both", expand=True, padx=20, pady=(0, 10))
+        text_input = ctk.CTkTextbox(modal, height=130)
+        text_input.pack(fill="both", expand=True, padx=20, pady=(0, 5))
+
+        # --- NEW: Toolbar Mini (Format & Clean, Clear All) ---
+        toolbar_frame = ctk.CTkFrame(modal, fg_color="transparent")
+        toolbar_frame.pack(fill="x", padx=20, pady=(0, 10))
+        
+        def on_format_clean():
+            raw_text = text_input.get("1.0", tk.END)
+            from src.utils.helpers import parse_raw_repo_text
+            cleaned_paths = parse_raw_repo_text(raw_text)
+            text_input.delete("1.0", tk.END)
+            text_input.insert("1.0", "\n".join(sorted(cleaned_paths)))
+            
+        def on_clear_all():
+            text_input.delete("1.0", tk.END)
+
+        def on_import_file():
+            file_path = filedialog.askopenfilename(
+                parent=modal,
+                title=_("import_from_file"),
+                filetypes=[
+                    (_("import_file_types"), "*.txt *.csv *.xlsx"),
+                    ("All Files", "*.*")
+                ]
+            )
+            if not file_path:
+                return
+            
+            ext = os.path.splitext(file_path)[1].lower()
+            items = []
+            try:
+                if ext == ".txt":
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        items = [line.strip() for line in f if line.strip()]
+                elif ext == ".csv":
+                    import csv
+                    with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
+                        reader = csv.reader(f)
+                        for row in reader:
+                            items.extend([cell.strip() for cell in row if cell.strip()])
+                elif ext == ".xlsx":
+                    try:
+                        import openpyxl
+                        wb = openpyxl.load_workbook(file_path, data_only=True)
+                        for sheet in wb.worksheets:
+                            for row in sheet.iter_rows(values_only=True):
+                                for cell in row:
+                                    if cell and str(cell).strip():
+                                        items.append(str(cell).strip())
+                    except ImportError:
+                        show_error(modal, _("error"), _("import_err_openpyxl"))
+                        return
+                
+                if items:
+                    current_text = text_input.get("1.0", tk.END).strip()
+                    new_content = "\n".join(items)
+                    if current_text:
+                        text_input.insert(tk.END, "\n" + new_content)
+                    else:
+                        text_input.insert("1.0", new_content)
+                    show_info(modal, _("done_title"), _("import_success", count=len(items)))
+            except Exception as e:
+                show_error(modal, _("error"), str(e))
+            
+        ctk.CTkButton(
+            toolbar_frame, text=_("format_clean_btn"), width=110, height=28,
+            font=ctk.CTkFont(family="Open Sans", size=10),
+            command=on_format_clean
+        ).pack(side="left")
+
+        ctk.CTkButton(
+            toolbar_frame, text=_("import_from_file"), width=110, height=28,
+            font=ctk.CTkFont(family="Open Sans", size=10), fg_color="#27ae60", hover_color="#2ecc71",
+            command=on_import_file
+        ).pack(side="left", padx=5)
+        
+        ctk.CTkButton(
+            toolbar_frame, text=_("clear_all_btn"), width=100, height=28,
+            font=ctk.CTkFont(family="Open Sans", size=10), fg_color="#e74c3c", hover_color="#c0392b",
+            command=on_clear_all
+        ).pack(side="right")
+
+        # --- NEW: Find & Replace Frame ---
+        fr_frame = ctk.CTkFrame(modal, fg_color="#f0f3f4", corner_radius=6)
+        fr_frame.pack(fill="x", padx=20, pady=(0, 10))
+        
+        # Row 1: Find
+        f_row = ctk.CTkFrame(fr_frame, fg_color="transparent")
+        f_row.pack(fill="x", padx=10, pady=(10, 5))
+        ctk.CTkLabel(f_row, text=_("find_lbl"), width=80, anchor="w", text_color="#2c3e50").pack(side="left")
+        find_entry = ctk.CTkEntry(f_row, height=28)
+        find_entry.pack(side="left", fill="x", expand=True)
+        
+        # Row 2: Replace
+        r_row = ctk.CTkFrame(fr_frame, fg_color="transparent")
+        r_row.pack(fill="x", padx=10, pady=(0, 10))
+        ctk.CTkLabel(r_row, text=_("replace_lbl"), width=80, anchor="w", text_color="#2c3e50").pack(side="left")
+        replace_entry = ctk.CTkEntry(r_row, height=28)
+        replace_entry.pack(side="left", fill="x", expand=True)
+        
+        def on_replace_all():
+            find_text = find_entry.get()
+            replace_text = replace_entry.get()
+            if not find_text:
+                return
+            current_text = text_input.get("1.0", tk.END)
+            new_text = current_text.replace(find_text, replace_text)
+            text_input.delete("1.0", tk.END)
+            text_input.insert("1.0", new_text)
+            
+        ctk.CTkButton(
+            r_row, text=_("replace_btn"), width=100, height=28,
+            command=on_replace_all
+        ).pack(side="left", padx=(10, 0))
 
         status_label = ctk.CTkLabel(modal, text="", text_color="gray70")
         status_label.pack(pady=(0, 8))
@@ -1312,6 +1425,8 @@ class GLRCApp(ctk.CTk):
         def set_generating(is_generating):
             state = "disabled" if is_generating else "normal"
             text_input.configure(state=state)
+            find_entry.configure(state=state)
+            replace_entry.configure(state=state)
             if generate_btn is not None:
                 generate_btn.configure(state=state)
             status_label.configure(text=_("generate_validating") if is_generating else "")
@@ -1360,6 +1475,12 @@ class GLRCApp(ctk.CTk):
         
         if not valid:
             show_error(modal, _("error"), _("generate_error_empty") + _("invalid_formats_count", count=len(invalid)))
+            return
+            
+        # Validation Preview Dialog
+        msg = _("ws_preview_msg", valid=len(valid), invalid=len(invalid))
+        proceed = show_custom_message(modal, _("ws_preview_title"), msg, icon_type="info", is_confirmation=True)
+        if not proceed:
             return
             
         filepath = filedialog.asksaveasfilename(

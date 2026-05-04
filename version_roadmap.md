@@ -29,6 +29,7 @@
 | **v1.4.3** | Patch | *UI Hotfix* — Menghilangkan flickering pada ikon modal melalui immediate apply tanpa timer. |
 | **v1.4.4** | Patch | *Hotfix* — Memperbaiki AttributeError pada fungsi Generate Workspace. |
 | **v1.4.5** | Patch | *Branch Configuration Selection Hotfix* — Memastikan modal branch memakai snapshot repo terpilih dan mengabaikan render halaman stale. |
+| **v1.5.0** | Minor | *Workspace Tools Maturation* — Menambahkan fitur Find & Replace, auto-format & clean text, dan pre-validation preview. |
 
 ---
 
@@ -42,80 +43,58 @@ gantt
 
     section v1.x (UX & Feature)
     v1.4.0 - UX & Clone Control      :a1, 2026-05-10, 5d
-    v1.5.0 - SSH & Update Notif      :a2, after a1, 5d
+    v1.5.0 - Workspace Tools Update  :a2, after a1, 3d
+    v1.6.0 - SSH & Update Notif      :a3, after a2, 5d
 
     section v2.x (Clean Code & Release)
-    v2.0.0 - Core API Overhaul       :b1, after a2, 7d
+    v2.0.0 - Core API Overhaul       :b1, after a3, 7d
     v2.1.0 - UI Segmentation         :b2, after b1, 5d
     v2.2.0 - Installer Release       :b3, after b2, 5d
 ```
 
 ---
 
-## 📝 v1.3.2 — Documentation & Community Shift
-> **Tipe: PATCH** — Pembaruan standar penulisan *Markdown* untuk pedoman repositori (Non-Code Changes).
+## 🛠️ v1.5.1 — UX & Navigasi
+> **Tipe: PATCH** — Peningkatan kenyamanan navigasi dan antarmuka.
 
 | # | Item | Status |
 |---|---|---|
-| 1 | **Rombak Total Aturan Bahasa Dokumentasi** — Jadikan **Bahasa Indonesia** sebagai bahasa fundamental tunggal proyek. Tulis ulang `README.md` dan `STRUCTURE.md` menargetkan para developer Indonesia. Format English menjadi sekunder (`README_en.md`). | 🟢 Selesai (Released) |
-| 2 | **Penyempurnaan Kejelasan & Contoh Nyata** — Menulis ulang seluruh panduan yang berbelit-belit/membingungkan di dalam `README.md`. Menyertakan contoh kasus penggunaan nyata (*real-world examples*) agar pengguna awam dapat langsung paham. | 🟢 Selesai (Released) |
-| 3 | **Community Base**: Buat struktur panduan kontribusi resmi (`CONTRIBUTING.md`), standar keamanan (`SECURITY.md`), serta *PR/Issue template* dalam Bahasa Indonesia baku. | 🟢 Selesai (Released) |
-| 4 | **GitHub Wiki Setup**: Siapkan struktur landasan untuk GitHub Wiki bagi dokumentasi yang bersifat buku panduan teknis yang ekstensif. | 🟢 Selesai (Released) |
-
-> [!SUCCESS]
-> **Status:** Rilis v1.3.2 telah resmi dipublikasikan ke cabang utama GitHub!
+| 1 | **Recent Workspaces** — Menambahkan menu "Recent" di modal Workspace Tools untuk memuat ulang 5-10 file terakhir. | ⚪ Pending |
+| 2 | **Auto-Detect IDE** — Deteksi otomatis IDE populer (VS Code, Cursor, PyCharm, Sublime) dalam pilihan dropdown. | ⚪ Pending |
+| 3 | **System Theme Sync** — Sinkronisasi tema aplikasi (Dark/Light) otomatis mengikuti pengaturan sistem. | ⚪ Pending |
 
 ---
 
-## ✨ v1.4.0 — UX & Clone Control
-> **Tipe: MINOR** — Fitur interaksi GUI utama dan pemantauan proses.
+## 🛠️ v1.5.2 — Efisiensi & Storage
+> **Tipe: PATCH** — Optimasi penggunaan ruang disk dan informasi pasca-sinkronisasi.
 
 | # | Item | Status |
 |---|---|---|
-| 1 | **Tombol Cancel/Abort** saat clone berjalan — menggunakan `threading.Event()` untuk graceful stop | 🟢 Selesai (Released) |
-| 2 | **Progress per-repo** — tampilkan status setiap repo (cloning/pulling/done/failed) di log atau UI | 🟢 Selesai (Released) |
-| 3 | **Tombol Export/Copy Log** — simpan log ke file `.txt` atau copy ke clipboard | 🟢 Selesai (Released) |
-| 4 | **Disk space check** — peringatan sebelum clone batch besar jika disk space kurang | 🟢 Selesai (Released) |
-| 5 | **Fitur "Bulk Apply" Branch** — master input di atas tabel untuk mengisi serentak (Clone from Branch, New?, New Branch Name) ke semua baris | 🟢 Selesai (Released) |
-| 6 | **Pencegahan Error & Validasi UI** — *Sticky Header* pada tabel, pemotongan teks (*middle truncation*) nama repo panjang, dan *error state* merah jika form kosong | 🟢 Selesai (Released) |
-| 7 | **Silent Clone (OS Windows)** — Menyembunyikan jendela *command prompt* berkedip (*flashing terminal*) saat mengeksekusi subprocess `git` via argumen `CREATE_NO_WINDOW` | 🟢 Selesai (Released) |
-| 8 | **Generate Workspace dari Teks Mentah** — Jendela *Input Text/TextArea* untuk *copy-paste* puluhan/ratusan list nama repositori (biasanya dari Excel/Notepad/Jira) untuk disulap otomatis menjadi file `.json` Workspace. Terdiri dari 4 subsistem teknis:<br><br>• **UI De-cluttering:** Menyatukan tombol *Export, Import, Generate* ke dalam satu *Dropdown/Modal* "Workspace Tools".<br>• **Auto-Parsing Level Lanjut:** *Cleansing* menggunakan *Set()* untuk membuang baris duplikat, serta *Regex* untuk memotong URL penuh (misal membuang `https://` dan `.git`) atau spasi kosong.<br>• **API Existence Validation:** Melakukan *ping* massal ke server GitLab untuk mem-validasi apakah nama repo tersebut benar-benar ada sebelum menuliskannya ke `.json` (Mencegah error *Repository Not Found 404* saat dikloning).<br>• **Count Feedback:** Dialog pop-up pelaporan visual ke pengguna (Contoh: *"Dari 81 input, ditemukan 15 Repositori unik. Workspace berhasil di-Generate"*). | 🟢 Selesai (Released) |
-
-> [!SUCCESS]
-> **Status:** Rilis v1.4.0 telah resmi diselesaikan dan di-patch.
+| 1 | **Shallow Clone Toggle** — Opsi `--depth 1` di Settings untuk menghemat kuota dan ruang disk pada repo besar. | ⚪ Pending |
+| 2 | **Post-Pull Summary** — Tampilan ringkasan file berubah atau tombol "View Changes" di IDE setelah operasi Pull. | ⚪ Pending |
 
 ---
 
-## 🛠️ v1.4.2 — Workspace Tools Stability
-> **Tipe: PATCH** — Hotfix stabilitas modal, Workspace Tools, dan callback UI dari proses background.
+## 🛠️ v1.5.3 — Keamanan & Maintenance
+> **Tipe: PATCH** — Notifikasi keamanan token dan pelacakan riwayat clone.
 
 | # | Item | Status |
 |---|---|---|
-| 1 | **Modal Visibility & Focus** — Modal yang masih aktif secara logika kini dipaksa tampil, fokus, dan melepas `grab_set()` dengan aman saat ditutup. | 🟢 Selesai (Released) |
-| 2 | **Workspace Tools Guard** — Import/Export tidak lagi menghancurkan modal sebelum file dialog, Generate tidak mengunci seluruh modal, dan klik berulang hanya memfokuskan modal yang sudah ada. | 🟢 Selesai (Released) |
-| 3 | **Thread-Safe UI Callback** — Callback dari proses background dijadwalkan melalui helper UI agar tidak memanggil widget setelah mainloop/window berakhir. | 🟢 Selesai (Released) |
-| 4 | **Clone Workflow Polish** — Label repo dark theme, reset tombol Clone, dan judul dialog pilih folder dirapikan agar konsisten dengan UI/i18n. | 🟢 Selesai (Released) |
-
-> [!SUCCESS]
-> **Status:** Patch v1.4.2 telah dicatat sebagai perbaikan stabilitas rilis 1.4.x.
+| 1 | **Token Expiry Warning** — Notifikasi UI jika token akan kedaluwarsa dalam < 24 jam berdasarkan durasi simpan. | ⚪ Pending |
+| 2 | **Clone Metadata** — File tersembunyi `.glrc_meta` di folder repo untuk mencatat info asal usul (branch, PAT owner). | ⚪ Pending |
 
 ---
 
-## 🛠️ v1.4.5 — Branch Configuration Selection Hotfix
-> **Tipe: PATCH** — Hotfix pemetaan repo terpilih pada modal Branch Configuration.
+## 🛠️ v1.5.4 — Perbaikan Logika
+> **Tipe: PATCH** — Penanganan cerdas terhadap konflik struktur folder.
 
 | # | Item | Status |
 |---|---|---|
-| 1 | **Snapshot Repo Terpilih** — Modal Branch Configuration memakai snapshot repo saat tombol clone ditekan agar baris modal dan job clone tetap konsisten. | 🟢 Selesai (Released) |
-| 2 | **Urutan Sesuai Halaman Aktif** — Repo yang terlihat dan dicentang pada halaman aktif diprioritaskan tampil di bagian atas modal. | 🟢 Selesai (Released) |
-| 3 | **Stale Fetch Guard** — Response fetch repositori lama diabaikan supaya halaman stale tidak menimpa state pagination terbaru. | 🟢 Selesai (Released) |
-
-> [!SUCCESS]
-> **Status:** Patch v1.4.5 siap sebagai hotfix untuk issue Branch Configuration yang tidak sesuai pilihan repo.
+| 1 | **Smart Folder Collision** — Tawarkan opsi "Clean & Clone" jika folder tujuan ada namun isinya bukan folder Git. | ⚪ Pending |
 
 ---
 
-## ✨ v1.5.0 — SSH Maturity & Version Update
+## ✨ v1.6.0 — SSH Maturity & Version Update
 > **Tipe: MINOR** — Fitur baru: Kematangan infrastruktur SSH dan Notifikasi Update.
 
 | # | Item | Status |

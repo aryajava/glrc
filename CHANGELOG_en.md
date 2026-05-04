@@ -4,6 +4,19 @@ All algorithmic modifications, architectural restructurings, bugfixes, and featu
 
 ======================
 
+## version 1.5.0
+
+*Workspace Tools Maturation* — Feature update to mature the Workspace Tools utility with productivity enhancements.
+
+### enhancement:
+- **Find & Replace:** Added a new frame below the input textbox to quickly find and replace substrings (e.g., stripping the `-sit` suffix from repo names).
+- **Format & Clean:** Added a button to instantly tidy up the input text (sort alphabetically, remove empty lines, and remove duplicates) prior to validation.
+- **Clear All:** Added a quick action button to empty the textbox.
+- **Bulk Import from File:** Supports direct repository list import from `.txt`, `.csv`, and `.xlsx` (Excel) files into the input textbox.
+- **Validation Preview:** The application now displays a confirmation dialog summarizing validation results (counts of valid and invalid repos) before prompting to save the JSON workspace file.
+
+======================
+
 ## version 1.4.5
 
 *Branch Configuration Selection Hotfix* — A patch to ensure the Branch Configuration modal always uses the repositories the user actually selected.
