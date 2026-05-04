@@ -4,6 +4,22 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
 
 ======================
 
+## version 1.4.0
+
+*UX & Clone Control* — Pembaruan masif pada antarmuka pengguna untuk interaksi *Workspace* yang lebih praktis serta pemantauan kloning repositori yang sangat informatif dan bisa dibatalkan secara *real-time*.
+
+### feature:
+- **Workspace Tools:** Penyatuan tombol Import/Export dan penambahan fitur *Generate Workspace* dari *raw text* (otomatis menghapus duplikasi dan spasi, ditambah proses validasi URL repositori via *ping* GitLab API).
+- **Graceful Cancelation:** Proses *cloning* repositori massal kini dilengkapi perlindungan *Abort*. Tekan tombol *Cancel* merah di UI dan aplikasi akan menghentikan antrean saat ini juga menggunakan teknologi `threading.Event()`.
+- **Bulk Apply & UI Refresh:** Menghadirkan *master input* untuk *Bulk Apply* pada jendela pengaturan kloning, serta mengaktifkan pemotongan teks (*middle truncation*) supaya nama repositori yang terlampau panjang tidak merusak tata letak tabel.
+- **Disk Protection Check:** Peringatan pro-aktif apabila kuota sisa disk pengguna (terkonfigurasi pada menu *Settings*) tak mencukupi sebelum rentetan *cloning* dijalankan.
+- **Progress Tracking & Export:** *Live update log* diperkaya format angka `[1/N]` demi transparansi. Tersedia pula fungsi untuk *Export Log* format `.txt` bagi kepentingan dokumentasi di dialog hasil akhir.
+
+### bugfix:
+- **Flashing Terminal (Windows):** Melampirkan proteksi param `CREATE_NO_WINDOW` ke seluruh *shell execution*. Terminal hitam tidak akan melompat dan berkedip acak lagi ketika interaksi Git terjadi di balik layar.
+
+======================
+
 ## version 1.3.2
 
 *Documentation & Community Shift* — Rilis ini didedikasikan eksklusif untuk me-*refactor* tatanan bahasa Markdown (Teks) di seluruh proyek. Kita merombak identitas repositori kembali menjadi *Native Indonesian* dengan gaya bahasa sehari-hari *programmer*.

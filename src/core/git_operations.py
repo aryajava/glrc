@@ -54,6 +54,11 @@ class GitOperations:
 
         clone_command = ["git", "clone", "-b", branch_name, auth_url]
 
+        # Setup creationflags for Windows to hide the terminal
+        creationflags = 0
+        if os.name == 'nt' or sys.platform == 'win32':
+            creationflags = 0x08000000  # CREATE_NO_WINDOW
+
         try:
             process = subprocess.Popen(
                 clone_command,
@@ -62,7 +67,8 @@ class GitOperations:
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
-                universal_newlines=True
+                universal_newlines=True,
+                creationflags=creationflags
             )
 
             for line in process.stdout:
@@ -94,6 +100,11 @@ class GitOperations:
         Returns:
             Boolean indicating success
         """
+        # Setup creationflags for Windows to hide the terminal
+        creationflags = 0
+        if os.name == 'nt' or sys.platform == 'win32':
+            creationflags = 0x08000000  # CREATE_NO_WINDOW
+
         try:
             process = subprocess.Popen(
                 ["git", "pull", "origin", branch_name],
@@ -102,7 +113,8 @@ class GitOperations:
                 stderr=subprocess.STDOUT,
                 text=True,
                 bufsize=1,
-                universal_newlines=True
+                universal_newlines=True,
+                creationflags=creationflags
             )
 
             for line in process.stdout:
@@ -134,6 +146,11 @@ class GitOperations:
         Returns:
             Boolean indicating success
         """
+        # Setup creationflags for Windows to hide the terminal
+        creationflags = 0
+        if os.name == 'nt' or sys.platform == 'win32':
+            creationflags = 0x08000000  # CREATE_NO_WINDOW
+
         try:
             # Checkout ke branch baru
             process = subprocess.Popen(
@@ -141,7 +158,8 @@ class GitOperations:
                 cwd=repo_local_path,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=True
+                text=True,
+                creationflags=creationflags
             )
 
             output, _ = process.communicate()

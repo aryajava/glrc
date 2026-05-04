@@ -4,6 +4,22 @@ All algorithmic modifications, architectural restructurings, bugfixes, and featu
 
 ======================
 
+## version 1.4.0
+
+*UX & Clone Control* — A massive user interface revamp introducing streamlined workspace tools, active clone monitoring, and safe real-time background task cancellation.
+
+### feature:
+- **Workspace Tools:** Consolidated the Import/Export buttons and introduced a *Generate Workspace* capability from raw text. This seamlessly strips duplicates and empty lines, actively validating repository existence against the GitLab API.
+- **Graceful Cancellation:** The bulk repository *clone* process is now safely terminable. Click the red *Cancel* button, and the app will halt its active processing queue gracefully utilizing `threading.Event()`.
+- **Bulk Apply & UI Refresh:** Implemented a new *Bulk Apply* master row in the clone configuration table alongside dynamic *middle truncation* for obscenely long repository titles to preserve a crisp layout.
+- **Disk Protection Check:** Introduced a proactive validation gate against minimum disk limits (configurable in *Settings*) before firing off large-batch git operations to avert full-disk crashes.
+- **Progress Tracking & Log Export:** Fleshed out live logs with `[1/N]` counter notation for granular progress visibility. Also embedded an *Export Log* button into the completion dialog to save `.txt` dumps.
+
+### bugfix:
+- **Flashing Terminal (Windows):** Forcibly injected `CREATE_NO_WINDOW` flags into all hidden subprocess executions. Cmd pop-ups will no longer flicker across the screen during intense behind-the-scenes git interactions.
+
+======================
+
 ## version 1.3.2
 
 *Documentation & Community Shift* — This minor patch release is dedicated entirely to refactoring the Markdown (Documentation) structure across the project source. We pivoted the repository identity towards an extensive Bilingual Ecosystem (Indonesian logic and English globally scaled framework structures).

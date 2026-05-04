@@ -540,11 +540,8 @@ class GLRCApp(ctk.CTk):
         self.btn_deselect_all = ctk.CTkButton(action_frame, text=_("deselect_all"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_uncheck_all_img, compound="left", fg_color="gray40", hover_color="gray30", command=self.deselect_all)
         self.btn_deselect_all.pack(side="left")
 
-        self.btn_import = ctk.CTkButton(action_frame, text=_("import_ws"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_import_img, compound="left", fg_color="#2980b9", hover_color="#1f618d", command=self.import_workspace)
-        self.btn_import.pack(side="right")
-
-        self.btn_export = ctk.CTkButton(action_frame, text=_("export_ws"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_export_img, compound="left", fg_color="#2980b9", hover_color="#1f618d", command=self.export_workspace)
-        self.btn_export.pack(side="right", padx=(0, 6))
+        self.btn_workspace_tools = ctk.CTkButton(action_frame, text=_("workspace_tools"), font=ctk.CTkFont(family="Open Sans"), height=32, compound="left", fg_color="#2980b9", hover_color="#1f618d", command=self.open_workspace_tools_modal)
+        self.btn_workspace_tools.pack(side="right", padx=(0, 6))
 
         # --- Scrollable List Repo ---
         self.scroll_frame = ctk.CTkScrollableFrame(
@@ -1077,7 +1074,7 @@ class GLRCApp(ctk.CTk):
     def open_settings_modal(self):
         modal = ctk.CTkToplevel(self)
         modal.title(_("settings_title"))
-        self.configure_modal_window(modal, 400, 320)
+        self.configure_modal_window(modal, 400, 380)
 
         ctk.CTkLabel(modal, text=_("settings_title"), font=ctk.CTkFont(family="Open Sans", size=18, weight="bold")).pack(pady=(20, 10))
         
@@ -1100,12 +1097,27 @@ class GLRCApp(ctk.CTk):
         ctk.CTkLabel(form, text=_("clone_method_lbl"), anchor="w").pack(fill="x")
         method_var = tk.StringVar(value=self.config.get_clone_method())
         method_combo = ctk.CTkOptionMenu(form, variable=method_var, values=["HTTPS", "SSH"])
-        method_combo.pack(fill="x", pady=(0, 20))
+        method_combo.pack(fill="x", pady=(0, 10))
+
+        # Min Disk Space
+        ctk.CTkLabel(form, text=_("min_disk_space_lbl"), anchor="w").pack(fill="x")
+        disk_var = tk.StringVar(value=str(self.config.get_min_disk_space_gb()))
+        disk_entry = ctk.CTkEntry(form, textvariable=disk_var)
+        disk_entry.pack(fill="x", pady=(0, 20))
 
         def save_settings():
+            try:
+                space_val = float(disk_var.get())
+                if space_val < 0:
+                    raise ValueError
+            except ValueError:
+                show_error(modal, _("error"), _("disk_space_invalid"))
+                return
+
             self.config.set_language(lang_var.get())
             self.config.set_theme(theme_var.get())
             self.config.set_clone_method(method_var.get())
+            self.config.set_min_disk_space_gb(space_val)
             i18n.set_language(lang_var.get())
             ctk.set_appearance_mode(theme_var.get())
             modal.destroy()
@@ -1175,6 +1187,84 @@ class GLRCApp(ctk.CTk):
             self.activate_window(self.log_window)
             self.log_window.grab_set()
 
+    def open_workspace_tools_modal(self):
+        modal = ctk.CTkToplevel(self)
+        modal.title(_("workspace_tools_title"))
+        self.configure_modal_window(modal, 550, 500)
+
+        ctk.CTkLabel(modal, text=_("workspace_tools_title"), font=ctk.CTkFont(family="Open Sans", size=18, weight="bold")).pack(pady=(20, 10))
+
+        # Import/Export frame
+        btn_frame = ctk.CTkFrame(modal, fg_color="transparent")
+        btn_frame.pack(fill="x", padx=20, pady=10)
+
+        ctk.CTkButton(btn_frame, text=_("import_ws"), image=self.icon_import_img, compound="left", command=lambda: [modal.destroy(), self.import_workspace()]).pack(side="left", expand=True, padx=(0, 5))
+        ctk.CTkButton(btn_frame, text=_("export_ws"), image=self.icon_export_img, compound="left", command=lambda: [modal.destroy(), self.export_workspace()]).pack(side="right", expand=True, padx=(5, 0))
+
+        ctk.CTkFrame(modal, height=2, fg_color="gray50").pack(fill="x", padx=20, pady=15)
+
+        # Generate Frame
+        ctk.CTkLabel(modal, text=_("workspace_generate"), font=ctk.CTkFont(family="Open Sans", size=14, weight="bold")).pack(pady=(0, 5))
+        ctk.CTkLabel(modal, text=_("generate_ws_desc"), wraplength=450, text_color="gray70").pack(pady=(0, 10))
+
+        text_input = ctk.CTkTextbox(modal, height=150)
+        text_input.pack(fill="both", expand=True, padx=20, pady=(0, 10))
+
+        def on_generate():
+            raw_text = text_input.get("1.0", tk.END)
+            total_lines = len([line for line in raw_text.splitlines() if line.strip()])
+            
+            from src.utils.helpers import parse_raw_repo_text
+            cleaned_paths = parse_raw_repo_text(raw_text)
+            
+            if not cleaned_paths:
+                show_error(modal, _("error"), _("generate_error_empty"))
+                return
+            
+            def _validate():
+                modal.attributes("-disabled", True)
+                try:
+                    self.update_log_threadsafe(_("generate_validating"))
+                    valid, invalid = self.api.validate_projects(cleaned_paths)
+                    self.after(0, lambda: self._on_validation_complete(valid, invalid, total_lines, modal))
+                except Exception as e:
+                    self.after(0, lambda e=e: show_error(modal, _("error"), str(e)))
+                    self.after(0, lambda: modal.attributes("-disabled", False))
+
+            threading.Thread(target=_validate).start()
+
+        ctk.CTkButton(modal, text=_("generate_btn"), height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=on_generate).pack(pady=(0, 20))
+
+    def _on_validation_complete(self, valid, invalid, total_lines, modal):
+        modal.attributes("-disabled", False)
+        
+        if not valid:
+            show_error(modal, _("error"), _("generate_error_empty") + _("invalid_formats_count", count=len(invalid)))
+            return
+            
+        filepath = filedialog.asksaveasfilename(
+            parent=modal,
+            title=_("export_ws"), defaultextension=".json", filetypes=[("JSON Files", "*.json")]
+        )
+        if filepath:
+            clean_data = {}
+            for proj in valid:
+                url = proj.get("http_url_to_repo", "")
+                if url:
+                    clean_data[url] = {
+                        "name": proj.get("path_with_namespace", ""),
+                        "id": proj.get("id", 0)
+                    }
+            try:
+                with open(filepath, 'w') as f:
+                    json.dump(clean_data, f, indent=4)
+                show_info(modal, _("ok"), _("generate_success", total=total_lines, unique=len(valid)))
+                modal.destroy()
+                
+                self._do_import_workspace(filepath)
+            except Exception as e:
+                show_error(modal, _("error"), _("failed_with_err", err=e))
+
     def export_workspace(self):
         if not self.selected_repos:
             self.update_selection_action_buttons()
@@ -1197,59 +1287,62 @@ class GLRCApp(ctk.CTk):
                     json.dump(clean_data, f, indent=4)
                 show_info(self, _("ok"), _("ws_exported", file=filepath))
             except Exception as e:
-                show_error(self, _("error"), f"Failed: {e}")
+                show_error(self, _("error"), _("failed_with_err", err=e))
 
     def import_workspace(self):
         filepath = filedialog.askopenfilename(
             title=_("import_ws"), filetypes=[("JSON Files", "*.json")]
         )
         if filepath:
-            try:
-                with open(filepath, 'r') as f:
-                    data = json.load(f)
+            self._do_import_workspace(filepath)
 
-                if not isinstance(data, dict):
-                    show_error(self, _("error"), _("ws_import_err"))
-                    return
+    def _do_import_workspace(self, filepath):
+        try:
+            with open(filepath, 'r') as f:
+                data = json.load(f)
 
-                # Merge into selected_repos
-                count = 0
-                for url, info in data.items():
-                    if url not in self.selected_repos:
-                        self.selected_repos[url] = {
-                            "name": info.get("name", ""),
-                            "id": info.get("id", 0)
-                        }
-                        count += 1
-
-                # Clear search input
-                self.search_entry.delete(0, tk.END)
-                self.validate_search_input()
-
-                # Build filtered list: match from cached_projects or create synthetic entries
-                cached_by_url = {p.get("http_url_to_repo"): p for p in self.cached_projects}
-                projects = []
-                for url, info in data.items():
-                    if url in cached_by_url:
-                        projects.append(cached_by_url[url])
-                    else:
-                        projects.append({
-                            "path_with_namespace": info.get("name", url.rstrip("/").split("/")[-1]),
-                            "http_url_to_repo": url,
-                            "id": info.get("id", 0),
-                        })
-
-                # Use filtered_projects with normal pagination (don't override per_page)
-                self.filtered_projects = projects
-                self.current_page = 1
-
-                self.update_repo_list_ui()
-                self.update_selection_action_buttons()
-                show_info(self, _("ok"), _("ws_imported", count=count))
-            except json.JSONDecodeError:
+            if not isinstance(data, dict):
                 show_error(self, _("error"), _("ws_import_err"))
-            except Exception as e:
-                show_error(self, _("error"), _("ws_import_err") + f"\n{e}")
+                return
+
+            # Merge into selected_repos
+            count = 0
+            for url, info in data.items():
+                if url not in self.selected_repos:
+                    self.selected_repos[url] = {
+                        "name": info.get("name", ""),
+                        "id": info.get("id", 0)
+                    }
+                    count += 1
+
+            # Clear search input
+            self.search_entry.delete(0, tk.END)
+            self.validate_search_input()
+
+            # Build filtered list: match from cached_projects or create synthetic entries
+            cached_by_url = {p.get("http_url_to_repo"): p for p in self.cached_projects}
+            projects = []
+            for url, info in data.items():
+                if url in cached_by_url:
+                    projects.append(cached_by_url[url])
+                else:
+                    projects.append({
+                        "path_with_namespace": info.get("name", url.rstrip("/").split("/")[-1]),
+                        "http_url_to_repo": url,
+                        "id": info.get("id", 0),
+                    })
+
+            # Use filtered_projects with normal pagination (don't override per_page)
+            self.filtered_projects = projects
+            self.current_page = 1
+
+            self.update_repo_list_ui()
+            self.update_selection_action_buttons()
+            show_info(self, _("ok"), _("ws_imported", count=count))
+        except json.JSONDecodeError:
+            show_error(self, _("error"), _("ws_import_err"))
+        except Exception as e:
+            show_error(self, _("error"), _("ws_import_err") + f"\n{e}")
 
     def select_all(self):
         for item in self.repo_items:
@@ -1342,6 +1435,60 @@ class GLRCApp(ctk.CTk):
         ToolTip(lbl_new_branch, _("create_branch_tooltip"))
         ctk.CTkLabel(col_hdr, text=_("col_new_branch_name"), font=ctk.CTkFont(family="Open Sans", size=12), text_color="gray", anchor="center", justify="center").grid(row=0, column=3, sticky="nsew")
 
+        # --- Bulk Apply Row ---
+        bulk_row = ctk.CTkFrame(modal, fg_color="#f0f3f4", corner_radius=6)
+        bulk_row.pack(fill="x", padx=24, pady=(2, 6))
+        bulk_row.columnconfigure(0, minsize=COL_WIDTHS[0])
+        bulk_row.columnconfigure(1, minsize=COL_WIDTHS[1])
+        bulk_row.columnconfigure(2, minsize=COL_WIDTHS[2])
+        bulk_row.columnconfigure(3, minsize=COL_WIDTHS[3])
+        
+        ctk.CTkLabel(bulk_row, text=_("bulk_apply"), font=ctk.CTkFont(family="Open Sans", size=12, weight="bold"), text_color="#2c3e50").grid(row=0, column=0, sticky="e", padx=(4, 15), pady=8)
+        
+        bulk_branch_var = ctk.StringVar(value="")
+        bulk_combo = ctk.CTkEntry(bulk_row, textvariable=bulk_branch_var, width=185, placeholder_text=_("type_branch"))
+        bulk_combo.grid(row=0, column=1, sticky="w")
+        
+        bulk_new_enabled = tk.BooleanVar(value=False)
+        bulk_cb = ctk.CTkCheckBox(bulk_row, text="", variable=bulk_new_enabled, width=20)
+        bulk_cb.grid(row=0, column=2, sticky="w", padx=30)
+        
+        bulk_new_name_var = tk.StringVar(value="")
+        bulk_entry = ctk.CTkEntry(bulk_row, textvariable=bulk_new_name_var, width=COL_WIDTHS[3], height=28, placeholder_text="new-branch-name", state="disabled")
+        bulk_entry.grid(row=0, column=3, sticky="we", padx=(0, 4))
+        
+        def on_bulk_cb_toggle():
+            if bulk_new_enabled.get():
+                bulk_entry.configure(state="normal")
+            else:
+                bulk_entry.configure(state="disabled")
+                bulk_new_name_var.set("")
+            
+            # Apply to all
+            for data in self.selected_repos.values():
+                if "new_branch_enabled" in data:
+                    data["new_branch_enabled"].set(bulk_new_enabled.get())
+                    # The trace on data["new_branch_enabled"] will handle disabling/enabling its entry
+        
+        bulk_cb.configure(command=on_bulk_cb_toggle)
+        
+        def on_bulk_branch_write(*args):
+            val = bulk_branch_var.get()
+            if val:
+                for data in self.selected_repos.values():
+                    if "selected_branch_var" in data:
+                        # Only apply if it's available or we force it? Let's force it for power users
+                        data["selected_branch_var"].set(val)
+        
+        def on_bulk_name_write(*args):
+            val = bulk_new_name_var.get()
+            for data in self.selected_repos.values():
+                if "new_branch_name_var" in data and data.get("new_branch_enabled", tk.BooleanVar()).get():
+                    data["new_branch_name_var"].set(val)
+                    
+        bulk_branch_var.trace_add("write", on_bulk_branch_write)
+        bulk_new_name_var.trace_add("write", on_bulk_name_write)
+
         # --- Scrollable content ---
         scroll_frame = ctk.CTkScrollableFrame(modal)
         scroll_frame.pack(padx=20, pady=(0, 6), fill="both", expand=True)
@@ -1427,14 +1574,14 @@ class GLRCApp(ctk.CTk):
             row.columnconfigure(3, minsize=C3)
 
             # --- Col 0: Repo name (truncated label + tooltip) ---
+            from src.utils.helpers import middle_truncate
             name = data["name"]
-            lbl = ctk.CTkEntry(
-                row, font=ctk.CTkFont(family="Open Sans", size=12),
-                fg_color="transparent", border_width=0
+            
+            lbl = ctk.CTkLabel(
+                row, font=ctk.CTkFont(family="Open Sans", size=12, weight="bold"),
+                text=middle_truncate(name, 35), anchor="w", text_color="#34495e"
             )
             lbl.grid(row=0, column=0, sticky="we", padx=(10, 4), pady=8)
-            lbl.insert(0, name)
-            lbl.configure(state="readonly")
             ToolTip(lbl, name)
 
             # --- Col 1: Branch dropdown ---
@@ -1505,23 +1652,48 @@ class GLRCApp(ctk.CTk):
     # CLONING
     # =========================================================================
     def execute_clone_from_modal(self, modal):
-        modal.destroy()
-        dest_folder = self.dest_entry.get().strip()
+        # 1. Validation for New Branch Name
+        urls_to_clone = list(self.selected_repos.keys())
+        for url in urls_to_clone:
+            data = self.selected_repos[url]
+            if data.get("new_branch_enabled") and data["new_branch_enabled"].get():
+                new_b_name = data.get("new_branch_name_var", tk.StringVar()).get().strip()
+                if not new_b_name:
+                    repo_name = data.get("name", "Unknown")
+                    show_error(modal, _("error"), _("new_branch_empty_err", repo_name=repo_name))
+                    return
 
-        self.clone_btn.configure(state="disabled", text=_("cloning_in_progress"))
-        # self.log_box is replaced by self.log_content conceptually.
-        # Clear log
+        # 2. Disk Space Check
+        dest_folder = self.dest_entry.get().strip()
+        min_disk_gb = self.config.get_min_disk_space_gb()
+        try:
+            total, used, free = shutil.disk_usage(dest_folder)
+            free_gb = free / (1024**3)
+            if free_gb < min_disk_gb:
+                proceed = show_confirmation(
+                    modal,
+                    _("warning"),
+                    _("disk_space_warning", free_gb=free_gb, min_disk_gb=min_disk_gb)
+                )
+                if not proceed:
+                    return
+        except Exception as e:
+            logger.warning(f"Failed to check disk space: {e}")
+
+        modal.destroy()
+        
+        self.cancel_event = threading.Event()
+        self.clone_btn.configure(text=_("cancel"), fg_color="#c0392b", hover_color="#922b21", command=self.cancel_cloning)
+        
         self.log_content = ""
         if self.log_window and self.log_window.winfo_exists() and hasattr(self.log_window, 'textbox'):
             self.log_window.textbox.configure(state="normal")
             self.log_window.textbox.delete("1.0", "end")
             self.log_window.textbox.configure(state="disabled")
 
-        urls_to_clone = list(self.selected_repos.keys())
-        
         if not shutil.which("git"):
             self.write_log(_("git_not_found_log"))
-            self.clone_btn.configure(state="normal", text=_("step3_btn"))
+            self.clone_btn.configure(state="normal", text=_("step3_btn"), fg_color="#1a7f37", hover_color="#15692f", command=self.open_branch_selection_modal)
             return
 
         self.write_log(_("start_clone_process", count=len(urls_to_clone)))
@@ -1530,9 +1702,16 @@ class GLRCApp(ctk.CTk):
         thread.daemon = True
         thread.start()
 
+    def cancel_cloning(self):
+        self.write_log(_("cancel_signal"))
+        self.cancel_event.set()
+        self.clone_btn.configure(state="disabled", text=_("canceling"))
+
     def run_multiple_clones(self, urls, dest_folder):
         self.sukses = 0
         self.gagal = 0
+        self.processed_count = 0
+        self.total_repos = len(urls)
         self.cloned_paths = []  # Track successfully cloned/updated repos
         self.lock = threading.Lock()
         
@@ -1553,6 +1732,13 @@ class GLRCApp(ctk.CTk):
         self.after(0, lambda: self.show_clone_result_dialog(cloned))
 
     def _process_single_repo(self, url, dest_folder, clone_method):
+        if hasattr(self, 'cancel_event') and self.cancel_event.is_set():
+            return
+            
+        with self.lock:
+            self.processed_count += 1
+            current_idx = self.processed_count
+            
         repo_data = self.selected_repos[url]
         repo_name = repo_data["name"]
         branch_name = repo_data["selected_branch_var"].get()
@@ -1586,21 +1772,26 @@ class GLRCApp(ctk.CTk):
 
         # Check if dir exists and is a git repo
         if os.path.isdir(repo_local_path) and os.path.isdir(os.path.join(repo_local_path, ".git")):
-            self.write_log(f"\n{_('pulling')} ({repo_name})")
+            self.write_log(f"\n[{current_idx}/{self.total_repos}] {_('pulling')} ({repo_name})")
+
+            # Setup creationflags for Windows to hide the terminal
+            creationflags = 0
+            if os.name == 'nt' or sys.platform == 'win32':
+                creationflags = 0x08000000  # CREATE_NO_WINDOW
 
             # Simpan original remote URL, lalu set ke auth_url agar pull bisa autentikasi
             original_remote_url = None
             try:
                 result = subprocess.run(
                     ["git", "remote", "get-url", "origin"],
-                    cwd=repo_local_path, capture_output=True, text=True, env=git_env
+                    cwd=repo_local_path, capture_output=True, text=True, env=git_env, creationflags=creationflags
                 )
                 if result.returncode == 0:
                     original_remote_url = result.stdout.strip()
 
                 subprocess.run(
                     ["git", "remote", "set-url", "origin", auth_url],
-                    cwd=repo_local_path, capture_output=True, text=True, env=git_env
+                    cwd=repo_local_path, capture_output=True, text=True, env=git_env, creationflags=creationflags
                 )
             except Exception as e:
                 self.write_log(_("fail_set_remote", err=str(e)))
@@ -1614,7 +1805,7 @@ class GLRCApp(ctk.CTk):
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
                         text=True, bufsize=1, universal_newlines=True,
-                        env=git_env
+                        env=git_env, creationflags=creationflags
                     )
                     for line in process.stdout:
                         clean_line = (
@@ -1643,7 +1834,7 @@ class GLRCApp(ctk.CTk):
                 try:
                     subprocess.run(
                         ["git", "remote", "set-url", "origin", original_remote_url],
-                        cwd=repo_local_path, capture_output=True, text=True, env=git_env
+                        cwd=repo_local_path, capture_output=True, text=True, env=git_env, creationflags=creationflags
                     )
                 except Exception:
                     pass
@@ -1662,7 +1853,7 @@ class GLRCApp(ctk.CTk):
                             ["git", "checkout", "-b", new_branch_name],
                             cwd=repo_local_path,
                             capture_output=True, text=True,
-                            env=git_env
+                            env=git_env, creationflags=creationflags
                         )
                         if cb_proc.returncode == 0:
                             self.write_log(_("branch_create_success", new_branch_name=new_branch_name))
@@ -1680,9 +1871,14 @@ class GLRCApp(ctk.CTk):
                 with self.lock:
                     self.gagal += 1
         else:
-            self.write_log(f"\n{_('cloning_repo', repo_name=repo_name, branch_name=branch_name)}")
+            self.write_log(f"\n[{current_idx}/{self.total_repos}] {_('cloning_repo', repo_name=repo_name, branch_name=branch_name)}")
             clone_command = ["git", "-c", "credential.helper=", "clone", "-b", branch_name, auth_url]
             success = False
+            
+            # Setup creationflags for Windows to hide the terminal
+            creationflags = 0
+            if os.name == 'nt' or sys.platform == 'win32':
+                creationflags = 0x08000000  # CREATE_NO_WINDOW
             for i in range(1, MAX_RETRY_ATTEMPTS + 1):
                 try:
                     process = subprocess.Popen(
@@ -1691,7 +1887,7 @@ class GLRCApp(ctk.CTk):
                         stdout=subprocess.PIPE,
                         stderr=subprocess.STDOUT,
                         text=True, bufsize=1, universal_newlines=True,
-                        env=git_env
+                        env=git_env, creationflags=creationflags
                     )
 
                     for line in process.stdout:
@@ -1734,7 +1930,7 @@ class GLRCApp(ctk.CTk):
                             ["git", "checkout", "-b", new_branch_name],
                             cwd=repo_local_path,
                             capture_output=True, text=True,
-                            env=git_env
+                            env=git_env, creationflags=creationflags
                         )
                         if cb_proc.returncode == 0:
                             self.write_log(_("branch_create_success", new_branch_name=new_branch_name))
@@ -1962,8 +2158,23 @@ class GLRCApp(ctk.CTk):
 
         # OK button
         btn_frame = ctk.CTkFrame(modal, fg_color="transparent")
-        btn_frame.pack(pady=(0, 16))
-        ctk.CTkButton(btn_frame, text="OK", width=120, height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=modal.destroy).pack()
+        btn_frame.pack(fill="x", padx=20, pady=(0, 16))
+        
+        def export_log():
+            filepath = filedialog.asksaveasfilename(
+                parent=modal,
+                title=_("export_log_btn"), defaultextension=".txt", filetypes=[("Text Files", "*.txt")]
+            )
+            if filepath:
+                try:
+                    with open(filepath, 'w', encoding='utf-8') as f:
+                        f.write(self.log_content)
+                    show_info(modal, _("ok"), _("log_exported_success"))
+                except Exception as e:
+                    show_error(modal, _("error"), _("failed_with_err", err=e))
+
+        ctk.CTkButton(btn_frame, text=_("export_log_btn"), width=120, height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), fg_color="#2980b9", hover_color="#1f618d", command=export_log).pack(side="left", padx=5, expand=True)
+        ctk.CTkButton(btn_frame, text="OK", width=120, height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=modal.destroy).pack(side="right", padx=5, expand=True)
 
 
 if __name__ == "__main__":

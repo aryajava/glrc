@@ -48,3 +48,41 @@ class ToolTip:
         if self.tooltip_window:
             self.tooltip_window.destroy()
             self.tooltip_window = None
+
+def middle_truncate(text: str, max_length: int = 50) -> str:
+    """
+    Truncates a string in the middle if it exceeds max_length.
+    Example: "very_long_repository_name_in_the_group" -> "very_long_repo...in_the_group"
+    """
+    if len(text) <= max_length:
+        return text
+    
+    half_len = (max_length - 3) // 2
+    return text[:half_len] + "..." + text[-half_len:]
+
+def parse_raw_repo_text(raw_text: str) -> set:
+    """
+    Cleans up a raw block of text (e.g. from copy-paste) into a set of unique repository paths.
+    - Trims whitespace
+    - Removes empty lines
+    - Strips 'https://', 'http://', domain names, and '.git'
+    """
+    import re
+    cleaned_repos = set()
+    lines = raw_text.splitlines()
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        
+        # Remove https://domain.com/ prefix if exists
+        line = re.sub(r'^https?://[^/]+/', '', line)
+        # Remove .git suffix if exists
+        if line.endswith('.git'):
+            line = line[:-4]
+            
+        line = line.strip('/')
+        if line:
+            cleaned_repos.add(line)
+            
+    return cleaned_repos

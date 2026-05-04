@@ -140,8 +140,17 @@ class ConfigManager:
         self.config_data["pat_expiry"] = expiry_iso_str
         self.save_config()
 
+    def set_min_disk_space_gb(self, space_gb: float):
+        self.config_data["min_disk_space_gb"] = space_gb
+        self.save_config()
+
     def get_dest_folder(self) -> str:
         return self.config_data.get("dest_folder", "")
+
+    def get_min_disk_space_gb(self) -> float:
+        # Avoid direct import loop by importing inside function or assume constants is available.
+        # However constants is not imported in config_manager yet. I'll just use 2.0 as fallback.
+        return float(self.config_data.get("min_disk_space_gb", 2.0))
 
     def get_gitlab_url(self) -> str:
         return self.config_data.get("gitlab_url", "")

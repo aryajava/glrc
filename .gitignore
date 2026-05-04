@@ -31,3 +31,6 @@ default_lang.txt
 .idea/
 .DS_Store
 Thumbs.db
+
+# Documentation artifacts
+version_roadmap.md

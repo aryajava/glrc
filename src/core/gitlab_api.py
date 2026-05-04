@@ -114,3 +114,36 @@ class GitLabAPI:
         except Exception as e:
             logger.warning("Error fetching branches for project %s: %s", project_id, e)
             return []
+
+    def validate_projects(self, project_paths: set) -> tuple[list, list]:
+        """
+        Memvalidasi sekumpulan project path dengan melakukan ping ke GitLab API.
+        
+        Args:
+            project_paths: Set of project paths (e.g. 'group/subgroup/project')
+            
+        Returns:
+            Tuple dari (valid_projects, invalid_projects)
+        """
+        import urllib.parse
+        valid_projects = []
+        invalid_projects = []
+        
+        for path in project_paths:
+            # Endpoint GitLab menerima URL encoded path
+            encoded_path = urllib.parse.quote_plus(path)
+            try:
+                resp = requests.get(
+                    f"{self.gitlab_url}/api/v4/projects/{encoded_path}",
+                    headers=self.headers,
+                    timeout=10
+                )
+                if resp.status_code == 200:
+                    valid_projects.append(resp.json())
+                else:
+                    invalid_projects.append(path)
+            except Exception as e:
+                logger.warning(f"Error validating project {path}: {e}")
+                invalid_projects.append(path)
+                
+        return valid_projects, invalid_projects
