@@ -4,6 +4,17 @@ All algorithmic modifications, architectural restructurings, bugfixes, and featu
 
 ======================
 
+## version 1.4.2
+
+*Workspace Tools Stability* — A patch to stabilize the Workspace Tools modal and prevent the app from feeling locked while workspace operations are running.
+
+### bugfix:
+- **Modal Lifecycle:** Import/Export no longer destroys the Workspace Tools modal before opening file dialogs, so the modal does not appear to vanish unexpectedly.
+- **UI Freeze Guard:** Generate no longer disables the whole grabbed modal. The app stays responsive while validation runs, with a visible status and temporarily locked input controls.
+- **Duplicate Modal Guard:** Repeated clicks on Workspace Tools now focus the existing modal instead of creating multiple focus-grabbing modals.
+
+======================
+
 ## version 1.4.1
 
 *Startup Hotfix* — A small patch to fix a crash when opening the application from the 1.4.0 release build.

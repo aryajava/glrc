@@ -4,6 +4,17 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
 
 ======================
 
+## version 1.4.2
+
+*Workspace Tools Stability* — Patch untuk menstabilkan modal Workspace Tools dan mencegah aplikasi terasa terkunci saat operasi workspace dijalankan.
+
+### bugfix:
+- **Modal Lifecycle:** Tombol Import/Export tidak lagi menghancurkan modal Workspace Tools sebelum file dialog dibuka, sehingga modal tidak tampak hilang mendadak.
+- **UI Freeze Guard:** Proses Generate tidak lagi men-disable seluruh modal yang sedang memegang `grab_set()`. Aplikasi tetap responsif dengan status validasi dan tombol input yang dikunci sementara.
+- **Duplicate Modal Guard:** Klik berulang pada tombol Workspace Tools kini hanya memfokuskan modal yang sudah terbuka, bukan membuat beberapa modal yang saling berebut fokus.
+
+======================
+
 ## version 1.4.1
 
 *Startup Hotfix* — Patch kecil untuk memperbaiki crash saat aplikasi dibuka dari build release 1.4.0.

@@ -1193,9 +1193,21 @@ class GLRCApp(ctk.CTk):
             self.log_window.grab_set()
 
     def open_workspace_tools_modal(self):
+        if getattr(self, "workspace_tools_modal", None) and self.workspace_tools_modal.winfo_exists():
+            self.activate_window(self.workspace_tools_modal)
+            self.workspace_tools_modal.grab_set()
+            return
+
         modal = ctk.CTkToplevel(self)
+        self.workspace_tools_modal = modal
         modal.title(_("workspace_tools_title"))
-        self.configure_modal_window(modal, 550, 500)
+
+        def close_workspace_tools():
+            if modal.winfo_exists():
+                modal.destroy()
+            self.workspace_tools_modal = None
+
+        self.configure_modal_window(modal, 550, 500, on_escape=close_workspace_tools)
 
         ctk.CTkLabel(modal, text=_("workspace_tools_title"), font=ctk.CTkFont(family="Open Sans", size=18, weight="bold")).pack(pady=(20, 10))
 
@@ -1203,8 +1215,20 @@ class GLRCApp(ctk.CTk):
         btn_frame = ctk.CTkFrame(modal, fg_color="transparent")
         btn_frame.pack(fill="x", padx=20, pady=10)
 
-        ctk.CTkButton(btn_frame, text=_("import_ws"), image=self.icon_import_img, compound="left", command=lambda: [modal.destroy(), self.import_workspace()]).pack(side="left", expand=True, padx=(0, 5))
-        ctk.CTkButton(btn_frame, text=_("export_ws"), image=self.icon_export_img, compound="left", command=lambda: [modal.destroy(), self.export_workspace()]).pack(side="right", expand=True, padx=(5, 0))
+        ctk.CTkButton(
+            btn_frame,
+            text=_("import_ws"),
+            image=self.icon_import_img,
+            compound="left",
+            command=lambda: self.import_workspace(parent=modal)
+        ).pack(side="left", expand=True, padx=(0, 5))
+        ctk.CTkButton(
+            btn_frame,
+            text=_("export_ws"),
+            image=self.icon_export_img,
+            compound="left",
+            command=lambda: self.export_workspace(parent=modal)
+        ).pack(side="right", expand=True, padx=(5, 0))
 
         ctk.CTkFrame(modal, height=2, fg_color="gray50").pack(fill="x", padx=20, pady=15)
 
@@ -1214,6 +1238,18 @@ class GLRCApp(ctk.CTk):
 
         text_input = ctk.CTkTextbox(modal, height=150)
         text_input.pack(fill="both", expand=True, padx=20, pady=(0, 10))
+
+        status_label = ctk.CTkLabel(modal, text="", text_color="gray70")
+        status_label.pack(pady=(0, 8))
+
+        generate_btn = None
+
+        def set_generating(is_generating):
+            state = "disabled" if is_generating else "normal"
+            text_input.configure(state=state)
+            if generate_btn is not None:
+                generate_btn.configure(state=state)
+            status_label.configure(text=_("generate_validating") if is_generating else "")
 
         def on_generate():
             raw_text = text_input.get("1.0", tk.END)
@@ -1225,23 +1261,34 @@ class GLRCApp(ctk.CTk):
             if not cleaned_paths:
                 show_error(modal, _("error"), _("generate_error_empty"))
                 return
+
+            set_generating(True)
             
             def _validate():
-                modal.attributes("-disabled", True)
                 try:
                     self.update_log_threadsafe(_("generate_validating"))
                     valid, invalid = self.api.validate_projects(cleaned_paths)
-                    self.after(0, lambda: self._on_validation_complete(valid, invalid, total_lines, modal))
+                    self.after(0, lambda: self._on_validation_complete(valid, invalid, total_lines, modal, set_generating))
                 except Exception as e:
-                    self.after(0, lambda e=e: show_error(modal, _("error"), str(e)))
-                    self.after(0, lambda: modal.attributes("-disabled", False))
+                    def _show_validation_error(err=e):
+                        if modal.winfo_exists():
+                            set_generating(False)
+                            show_error(modal, _("error"), str(err))
+                    self.after(0, _show_validation_error)
 
-            threading.Thread(target=_validate).start()
+            thread = threading.Thread(target=_validate)
+            thread.daemon = True
+            thread.start()
 
-        ctk.CTkButton(modal, text=_("generate_btn"), height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=on_generate).pack(pady=(0, 20))
+        generate_btn = ctk.CTkButton(modal, text=_("generate_btn"), height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=on_generate)
+        generate_btn.pack(pady=(0, 20))
 
-    def _on_validation_complete(self, valid, invalid, total_lines, modal):
-        modal.attributes("-disabled", False)
+    def _on_validation_complete(self, valid, invalid, total_lines, modal, set_generating=None):
+        if not modal.winfo_exists():
+            return
+
+        if set_generating is not None:
+            set_generating(False)
         
         if not valid:
             show_error(modal, _("error"), _("generate_error_empty") + _("invalid_formats_count", count=len(invalid)))
@@ -1264,19 +1311,23 @@ class GLRCApp(ctk.CTk):
                 with open(filepath, 'w') as f:
                     json.dump(clean_data, f, indent=4)
                 show_info(modal, _("ok"), _("generate_success", total=total_lines, unique=len(valid)))
-                modal.destroy()
+                if modal.winfo_exists():
+                    modal.destroy()
+                self.workspace_tools_modal = None
                 
                 self._do_import_workspace(filepath)
             except Exception as e:
                 show_error(modal, _("error"), _("failed_with_err", err=e))
 
-    def export_workspace(self):
+    def export_workspace(self, parent=None):
+        dialog_parent = parent or self
         if not self.selected_repos:
             self.update_selection_action_buttons()
-            show_warning(self, _("warning"), _("at_least_one"))
+            show_warning(dialog_parent, _("warning"), _("at_least_one"))
             return
             
         filepath = filedialog.asksaveasfilename(
+            parent=dialog_parent,
             title=_("export_ws"), defaultextension=".json", filetypes=[("JSON Files", "*.json")]
         )
         if filepath:
@@ -1290,24 +1341,27 @@ class GLRCApp(ctk.CTk):
                     }
                 with open(filepath, 'w') as f:
                     json.dump(clean_data, f, indent=4)
-                show_info(self, _("ok"), _("ws_exported", file=filepath))
+                show_info(dialog_parent, _("ok"), _("ws_exported", file=filepath))
             except Exception as e:
-                show_error(self, _("error"), _("failed_with_err", err=e))
+                show_error(dialog_parent, _("error"), _("failed_with_err", err=e))
 
-    def import_workspace(self):
+    def import_workspace(self, parent=None):
+        dialog_parent = parent or self
         filepath = filedialog.askopenfilename(
+            parent=dialog_parent,
             title=_("import_ws"), filetypes=[("JSON Files", "*.json")]
         )
         if filepath:
-            self._do_import_workspace(filepath)
+            self._do_import_workspace(filepath, parent=dialog_parent)
 
-    def _do_import_workspace(self, filepath):
+    def _do_import_workspace(self, filepath, parent=None):
+        dialog_parent = parent or self
         try:
             with open(filepath, 'r') as f:
                 data = json.load(f)
 
             if not isinstance(data, dict):
-                show_error(self, _("error"), _("ws_import_err"))
+                show_error(dialog_parent, _("error"), _("ws_import_err"))
                 return
 
             # Merge into selected_repos
@@ -1343,11 +1397,11 @@ class GLRCApp(ctk.CTk):
 
             self.update_repo_list_ui()
             self.update_selection_action_buttons()
-            show_info(self, _("ok"), _("ws_imported", count=count))
+            show_info(dialog_parent, _("ok"), _("ws_imported", count=count))
         except json.JSONDecodeError:
-            show_error(self, _("error"), _("ws_import_err"))
+            show_error(dialog_parent, _("error"), _("ws_import_err"))
         except Exception as e:
-            show_error(self, _("error"), _("ws_import_err") + f"\n{e}")
+            show_error(dialog_parent, _("error"), _("ws_import_err") + f"\n{e}")
 
     def select_all(self):
         for item in self.repo_items:
