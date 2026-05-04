@@ -4,6 +4,17 @@ All algorithmic modifications, architectural restructurings, bugfixes, and featu
 
 ======================
 
+## version 1.4.5
+
+*Branch Configuration Selection Hotfix* — A patch to ensure the Branch Configuration modal always uses the repositories the user actually selected.
+
+### bugfix:
+- **Selected Repository Snapshot:** Branch Configuration now creates a snapshot of selected repositories when the clone button is pressed, so repository rows, selected branches, and clone jobs no longer depend on global selection state that may change after the modal opens.
+- **Visible Selection Ordering:** Repositories visible and checked on the active page are shown first in the Branch Configuration modal, followed by selections from other pages when present.
+- **Stale Pagination Guard:** Expired repository fetch results are now ignored so an old page cannot overwrite a newer page and create invalid states such as `Page 17 of 7`.
+
+======================
+
 ## version 1.4.4
 
 *Hotfix* for a runtime error in Workspace Tools.

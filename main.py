@@ -153,6 +153,7 @@ class GLRCApp(ctk.CTk):
         self.selected_repos = {}
         self.cached_projects = []
         self.filtered_projects = None
+        self.fetch_request_id = 0
         
         # --- Variabel State Fetching ---
         self.is_fetching = False
@@ -860,6 +861,8 @@ class GLRCApp(ctk.CTk):
         self._set_btn_state(self.last_btn, "normal" if self.current_page < self.total_pages else "disabled")
 
     def load_page_data(self):
+        self.fetch_request_id += 1
+        request_id = self.fetch_request_id
         self.set_ui_loading_state(True)
         self.page_label.configure(text=_("loading"))
         search_query = self.search_entry.get().strip()
@@ -871,12 +874,13 @@ class GLRCApp(ctk.CTk):
                 "search_query": search_query,
                 "current_page": current_page,
                 "per_page": per_page,
+                "request_id": request_id,
             }
         )
         thread.daemon = True
         thread.start()
 
-    def fetch_repositories(self, search_query="", current_page=None, per_page=None):
+    def fetch_repositories(self, search_query="", current_page=None, per_page=None, request_id=None):
         try:
             import fnmatch
             headers = {"PRIVATE-TOKEN": self.api_token}
@@ -923,12 +927,11 @@ class GLRCApp(ctk.CTk):
                     
                     page += 1
                     
-                # For search results, we disable pagination and show all
-                self.total_rows = len(all_projects)
-                self.total_pages = 1
-                self.current_page = 1
                 projects_to_show = all_projects
-                self.cached_projects = all_projects
+                total_rows = len(all_projects)
+                total_pages = 1
+                render_page = 1
+                cached_projects = all_projects
                 
             else:
                 # Normal paginated view
@@ -941,22 +944,38 @@ class GLRCApp(ctk.CTk):
                 response.raise_for_status()
                 projects_to_show = response.json()
                 
-                # Read pagination headers
                 total = response.headers.get('X-Total', '0')
-                total_pages = response.headers.get('X-Total-Pages', '1')
-                self.total_rows = int(total) if total.isdigit() else len(projects_to_show)
-                self.total_pages = int(total_pages) if total_pages.isdigit() else 1
-                self.cached_projects = projects_to_show
-                
-            if not projects_to_show and current_page == 1:
-                msg = _("not_found")
-                self.schedule_ui(lambda root=self: show_info(root, _("ok"), msg))
-                self.schedule_ui(lambda: self.show_main_frame([], False))
-                self.schedule_ui(lambda: self.connect_btn.configure(state="normal", text=_("connect_btn")))
-                self.schedule_ui(lambda: self.set_ui_loading_state(False))
+                total_pages_header = response.headers.get('X-Total-Pages', '1')
+                total_rows = int(total) if total.isdigit() else len(projects_to_show)
+                total_pages = int(total_pages_header) if total_pages_header.isdigit() else 1
+                render_page = current_page
+                cached_projects = projects_to_show
+
+            if request_id is not None and request_id != self.fetch_request_id:
+                logger.debug("Skipped stale repository fetch result.")
                 return
 
-            self.schedule_ui(lambda: self.show_main_frame(projects_to_show, current_page < self.total_pages))
+            def apply_fetch_result():
+                if request_id is not None and request_id != self.fetch_request_id:
+                    logger.debug("Skipped stale repository render.")
+                    return
+
+                self.total_rows = total_rows
+                self.total_pages = total_pages
+                self.current_page = min(max(1, render_page), self.total_pages)
+                self.cached_projects = cached_projects
+
+                if not projects_to_show and self.current_page == 1:
+                    msg = _("not_found")
+                    show_info(self, _("ok"), msg)
+                    self.show_main_frame([], False)
+                    self.connect_btn.configure(state="normal", text=_("connect_btn"))
+                    self.set_ui_loading_state(False)
+                    return
+
+                self.show_main_frame(projects_to_show, self.current_page < self.total_pages)
+
+            self.schedule_ui(apply_fetch_result)
 
         except requests.exceptions.RequestException as e:
             self.schedule_ui(lambda root=self: show_error(root, _("fetching_error"), f"{_('error')}: {e}"))
@@ -1479,9 +1498,34 @@ class GLRCApp(ctk.CTk):
     # =========================================================================
     # MODAL BRANCH SELECTION
     # =========================================================================
+    def get_selected_repo_snapshot(self):
+        """Snapshot selected repositories with the visible page order first."""
+        snapshot = []
+        seen_urls = set()
+
+        for item in self.repo_items:
+            url = item.get("url")
+            var = item.get("var")
+            is_checked = False
+            try:
+                is_checked = bool(var and var.get())
+            except tk.TclError:
+                is_checked = url in self.selected_repos
+
+            if is_checked and url in self.selected_repos:
+                snapshot.append((url, dict(self.selected_repos[url])))
+                seen_urls.add(url)
+
+        for url, info in self.selected_repos.items():
+            if url not in seen_urls:
+                snapshot.append((url, dict(info)))
+
+        return snapshot
+
     def open_branch_selection_modal(self):
         dest_folder = self.dest_entry.get().strip()
-        urls_to_clone = list(self.selected_repos.keys())
+        selected_repo_snapshot = self.get_selected_repo_snapshot()
+        urls_to_clone = [url for url, _ in selected_repo_snapshot]
 
         if not urls_to_clone:
             show_warning(self, _("warning"), _("at_least_one"))
@@ -1573,7 +1617,7 @@ class GLRCApp(ctk.CTk):
                 bulk_new_name_var.set("")
             
             # Apply to all
-            for data in self.selected_repos.values():
+            for _, data in selected_repo_snapshot:
                 if "new_branch_enabled" in data:
                     data["new_branch_enabled"].set(bulk_new_enabled.get())
                     # The trace on data["new_branch_enabled"] will handle disabling/enabling its entry
@@ -1583,14 +1627,14 @@ class GLRCApp(ctk.CTk):
         def on_bulk_branch_write(*args):
             val = bulk_branch_var.get()
             if val:
-                for data in self.selected_repos.values():
+                for _, data in selected_repo_snapshot:
                     if "selected_branch_var" in data:
                         # Only apply if it's available or we force it? Let's force it for power users
                         data["selected_branch_var"].set(val)
         
         def on_bulk_name_write(*args):
             val = bulk_new_name_var.get()
-            for data in self.selected_repos.values():
+            for _, data in selected_repo_snapshot:
                 if "new_branch_name_var" in data and data.get("new_branch_enabled", tk.BooleanVar()).get():
                     data["new_branch_name_var"].set(val)
                     
@@ -1622,21 +1666,21 @@ class GLRCApp(ctk.CTk):
             fg_color="#1a7f37", hover_color="#15692f",
             font=ctk.CTkFont(family="Open Sans", size=13, weight="bold"),
             width=160, height=36,
-            command=lambda: self.execute_clone_from_modal(modal)
+            command=lambda: self.execute_clone_from_modal(modal, selected_repo_snapshot)
         )
         action_btn.pack(side="right")
 
         thread = threading.Thread(
             target=self.fetch_branches_logic,
-            args=(modal, scroll_frame, action_btn, loading_lbl)
+            args=(modal, scroll_frame, action_btn, loading_lbl, selected_repo_snapshot)
         )
         thread.daemon = True
         thread.start()
 
-    def fetch_branches_logic(self, modal, scroll_frame, action_btn, loading_lbl):
+    def fetch_branches_logic(self, modal, scroll_frame, action_btn, loading_lbl, selected_repo_snapshot):
         headers = {"PRIVATE-TOKEN": self.api_token}
 
-        for url, data in self.selected_repos.items():
+        for url, data in selected_repo_snapshot:
             if not modal.winfo_exists():
                 return
 
@@ -1665,9 +1709,9 @@ class GLRCApp(ctk.CTk):
             except Exception:
                 data["available_branches"] = ["main", "master"]
 
-        self.schedule_ui(lambda: self.render_branch_rows(modal, scroll_frame, action_btn, loading_lbl))
+        self.schedule_ui(lambda: self.render_branch_rows(modal, scroll_frame, action_btn, loading_lbl, selected_repo_snapshot))
 
-    def render_branch_rows(self, modal, scroll_frame, action_btn, loading_lbl):
+    def render_branch_rows(self, modal, scroll_frame, action_btn, loading_lbl, selected_repo_snapshot):
         if not (modal.winfo_exists() and scroll_frame.winfo_exists() and action_btn.winfo_exists()):
             return
 
@@ -1678,7 +1722,7 @@ class GLRCApp(ctk.CTk):
         # MUST match COL_WIDTHS in open_branch_config_modal header
         C0, C1, C2, C3 = 260, 200, 90, 165
 
-        for url, data in self.selected_repos.items():
+        for url, data in selected_repo_snapshot:
             row = ctk.CTkFrame(scroll_frame, corner_radius=8)
             row.pack(fill="x", pady=3, padx=4)
 
@@ -1766,12 +1810,10 @@ class GLRCApp(ctk.CTk):
     # =========================================================================
     # CLONING
     # =========================================================================
-    def execute_clone_from_modal(self, modal):
+    def execute_clone_from_modal(self, modal, selected_repo_snapshot):
         # 1. Validation for New Branch Name
-        urls_to_clone = list(self.selected_repos.keys())
         clone_jobs = []
-        for url in urls_to_clone:
-            data = self.selected_repos[url]
+        for url, data in selected_repo_snapshot:
             branch_var = data.get("selected_branch_var")
             branch_name = branch_var.get().strip() if branch_var else "main"
             new_branch_enabled = data.get("new_branch_enabled")

@@ -4,6 +4,17 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
 
 ======================
 
+## version 1.4.5
+
+*Branch Configuration Selection Hotfix* — Patch untuk memastikan modal Branch Configuration selalu memakai daftar repositori yang benar-benar dipilih pengguna.
+
+### bugfix:
+- **Selected Repository Snapshot:** Branch Configuration kini membuat snapshot repositori terpilih saat tombol clone ditekan, sehingga daftar repo, branch yang dipilih, dan job clone tidak lagi bergantung pada state global yang bisa berubah setelah modal dibuka.
+- **Visible Selection Ordering:** Repo yang sedang terlihat dan dicentang di halaman aktif ditampilkan lebih dulu di modal Branch Configuration, lalu diikuti pilihan dari halaman lain jika ada.
+- **Stale Pagination Guard:** Hasil fetch repositori yang sudah kedaluwarsa kini diabaikan agar halaman lama tidak bisa menimpa halaman baru dan memunculkan kondisi seperti `Page 17 of 7`.
+
+======================
+
 ## version 1.4.4
 
 *Hotfix* untuk isu *runtime error* pada Workspace Tools.

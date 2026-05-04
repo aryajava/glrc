@@ -28,6 +28,7 @@
 | **v1.4.2** | Patch | *Workspace Tools Stability* — Menstabilkan modal/focus, mencegah UI terkunci, dan mengamankan callback dari background thread. |
 | **v1.4.3** | Patch | *UI Hotfix* — Menghilangkan flickering pada ikon modal melalui immediate apply tanpa timer. |
 | **v1.4.4** | Patch | *Hotfix* — Memperbaiki AttributeError pada fungsi Generate Workspace. |
+| **v1.4.5** | Patch | *Branch Configuration Selection Hotfix* — Memastikan modal branch memakai snapshot repo terpilih dan mengabaikan render halaman stale. |
 
 ---
 
@@ -97,6 +98,20 @@ gantt
 
 > [!SUCCESS]
 > **Status:** Patch v1.4.2 telah dicatat sebagai perbaikan stabilitas rilis 1.4.x.
+
+---
+
+## 🛠️ v1.4.5 — Branch Configuration Selection Hotfix
+> **Tipe: PATCH** — Hotfix pemetaan repo terpilih pada modal Branch Configuration.
+
+| # | Item | Status |
+|---|---|---|
+| 1 | **Snapshot Repo Terpilih** — Modal Branch Configuration memakai snapshot repo saat tombol clone ditekan agar baris modal dan job clone tetap konsisten. | 🟢 Selesai (Released) |
+| 2 | **Urutan Sesuai Halaman Aktif** — Repo yang terlihat dan dicentang pada halaman aktif diprioritaskan tampil di bagian atas modal. | 🟢 Selesai (Released) |
+| 3 | **Stale Fetch Guard** — Response fetch repositori lama diabaikan supaya halaman stale tidak menimpa state pagination terbaru. | 🟢 Selesai (Released) |
+
+> [!SUCCESS]
+> **Status:** Patch v1.4.5 siap sebagai hotfix untuk issue Branch Configuration yang tidak sesuai pilihan repo.
 
 ---
 
