@@ -21,7 +21,10 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
   - `cloud` (e2bd) untuk repositori yang belum pernah di-clone.
 - **Quick Action Tooltips:** Penambahan tooltip informatif pada setiap aksi cepat di baris repositori.
 - **Date Formatting:** Integrasi helper untuk memformat timestamp GitLab menjadi format yang mudah dibaca (DD MMM YYYY).
-- **UI Polish & Alignment:** Perbaikan presisi alignment antar kolom, pemindahan header ke posisi 'Repository List' untuk efisiensi ruang, dan penambahan spacer untuk mengimbangi scrollbar.
+- **UI Refactoring & Header Checkbox:** Menghapus tombol 'Select All' dan 'Deselect All'. Sebagai gantinya, ditambahkan Checkbox pada header tabel untuk melakukan seleksi cepat satu halaman.
+- **Themed Copy Menu:** Mengganti menu native (tk.Menu) pada aksi 'Copy' dengan popup kustom yang mendukung tema gelap/terang aplikasi.
+- **Improved Alignment:** Penambahan `minsize` eksplisit pada setiap kolom untuk menjamin presisi alignment antar header dan baris data.
+- **Layout Optimization:** Menata ulang posisi tombol 'Export' dan 'Workspace Tools' ke sisi kanan untuk tampilan yang lebih bersih.
 - **Last Activity Source:** Penjelasan pada tooltip bahwa data diambil dari aktivitas terakhir proyek secara keseluruhan di GitLab (bukan hanya default branch).
 
 ======================

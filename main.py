@@ -939,25 +939,18 @@ class GLRCApp(ctk.CTk):
         self.loading_bar.pack(fill="x", padx=10, pady=(0, 0))
         self.loading_bar.set(0) # Hide initially by not starting
 
-        # Action Frame (Select & Workspace tools)
+        # Action Frame (Export & Workspace tools)
         action_frame = ctk.CTkFrame(step2_frame, fg_color="transparent")
         action_frame.pack(fill="x", padx=10, pady=(6, 6))
 
-        self.btn_select_all = ctk.CTkButton(action_frame, text=_("select_all"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_check_all_img, compound="left", command=self.select_all)
-        self.btn_select_all.pack(side="left", padx=(0, 6))
-        ToolTip(self.btn_select_all, _("tooltip_select_all"))
-
-        self.btn_deselect_all = ctk.CTkButton(action_frame, text=_("deselect_all"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_uncheck_all_img, compound="left", fg_color="gray40", hover_color="gray30", command=self.deselect_all)
-        self.btn_deselect_all.pack(side="left")
-        ToolTip(self.btn_deselect_all, _("tooltip_deselect_all"))
-
-        self.btn_export = ctk.CTkButton(action_frame, text=_("btn_export"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_export_img, compound="left", fg_color="gray40", hover_color="gray30", command=self.export_workspace)
-        self.btn_export.pack(side="left", padx=(6, 0))
-        ToolTip(self.btn_export, _("tooltip_btn_export"))
-
+        # Push Workspace Tools & Export to the right
         self.btn_workspace_tools = ctk.CTkButton(action_frame, text=_("workspace_tools"), font=ctk.CTkFont(family="Open Sans"), height=32, compound="left", fg_color="#2980b9", hover_color="#1f618d", command=self.open_workspace_tools_modal)
         self.btn_workspace_tools.pack(side="right", padx=(0, 6))
         ToolTip(self.btn_workspace_tools, _("tooltip_workspace_tools"))
+
+        self.btn_export = ctk.CTkButton(action_frame, text=_("btn_export"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_export_img, compound="left", fg_color="gray40", hover_color="gray30", command=self.export_workspace)
+        self.btn_export.pack(side="right", padx=(6, 0))
+        ToolTip(self.btn_export, _("tooltip_btn_export"))
 
         # --- Table Container (Header + Scrollable List) ---
         table_container = ctk.CTkFrame(step2_frame, fg_color="transparent")
@@ -968,8 +961,8 @@ class GLRCApp(ctk.CTk):
         self.table_header.pack(fill="x", pady=(0, 2))
         # Column weights - matching the rows
         self.table_header.grid_columnconfigure(0, minsize=45) # CB
-        self.table_header.grid_columnconfigure(1, weight=3)   # Name
-        self.table_header.grid_columnconfigure(2, weight=2)   # Namespace
+        self.table_header.grid_columnconfigure(1, weight=3, minsize=240)   # Name
+        self.table_header.grid_columnconfigure(2, weight=2, minsize=180)   # Namespace
         self.table_header.grid_columnconfigure(3, minsize=60) # Status
         self.table_header.grid_columnconfigure(4, minsize=145) # Activity
         self.table_header.grid_columnconfigure(5, minsize=120) # Actions
@@ -977,7 +970,15 @@ class GLRCApp(ctk.CTk):
         
         # Header Labels (using bold font)
         hdr_font = ctk.CTkFont(family="Open Sans", size=12, weight="bold")
-        ctk.CTkLabel(self.table_header, text="", width=30).grid(row=0, column=0)
+        
+        self.header_cb_var = tk.BooleanVar(value=False)
+        self.header_cb = ctk.CTkCheckBox(
+            self.table_header, text="", width=24, height=24,
+            variable=self.header_cb_var, command=self.toggle_all_page
+        )
+        self.header_cb.grid(row=0, column=0, padx=(12, 0))
+        ToolTip(self.header_cb, _("tooltip_select_all"))
+
         ctk.CTkLabel(self.table_header, text=_("col_name"), font=hdr_font).grid(row=0, column=1, sticky="w", padx=(10, 0))
         ctk.CTkLabel(self.table_header, text=_("col_namespace"), font=hdr_font).grid(row=0, column=2, sticky="w", padx=(10, 0))
         ctk.CTkLabel(self.table_header, text=_("col_status"), font=hdr_font).grid(row=0, column=3)
@@ -1454,6 +1455,8 @@ class GLRCApp(ctk.CTk):
         self.main_frame.pack(fill="both", expand=True)
 
         self.clear_repo_list_widgets()
+        if hasattr(self, 'header_cb_var'):
+            self.header_cb_var.set(False)
 
         if not projects:
             context = "search" if self.search_entry.get().strip() else "initial"
@@ -1501,8 +1504,8 @@ class GLRCApp(ctk.CTk):
             
             # Grid config to match header
             row_frame.grid_columnconfigure(0, minsize=45)
-            row_frame.grid_columnconfigure(1, weight=3)
-            row_frame.grid_columnconfigure(2, weight=2)
+            row_frame.grid_columnconfigure(1, weight=3, minsize=240)
+            row_frame.grid_columnconfigure(2, weight=2, minsize=180)
             row_frame.grid_columnconfigure(3, minsize=60)
             row_frame.grid_columnconfigure(4, minsize=145)
             row_frame.grid_columnconfigure(5, minsize=120)
@@ -1513,7 +1516,7 @@ class GLRCApp(ctk.CTk):
                 variable=var, onvalue=http_url, offvalue="",
                 command=on_toggle, width=24, height=24
             )
-            cb.grid(row=0, column=0, padx=(10, 0))
+            cb.grid(row=0, column=0, padx=(12, 0))
 
             # C1: Project Name (Bold/Large)
             name_lbl = ctk.CTkLabel(
@@ -1569,15 +1572,8 @@ class GLRCApp(ctk.CTk):
             )
             copy_btn.pack(side="left", padx=2)
             
-            def show_copy_menu(btn=copy_btn, h=http_url, s=ssh_url):
-                menu = tk.Menu(btn, tearoff=0)
-                menu.add_command(label="Copy HTTPS", command=lambda: self.copy_to_clip(h))
-                if s:
-                    menu.add_command(label="Copy SSH", command=lambda: self.copy_to_clip(s))
-                menu.tk_popup(btn.winfo_rootx(), btn.winfo_rooty() + btn.winfo_height())
-
-            copy_btn.configure(command=show_copy_menu)
-            ToolTip(copy_btn, _("tooltip_copy_path")) # Reusing key or should use a more generic one
+            copy_btn.configure(command=lambda b=copy_btn, h=http_url, s=ssh_url: self.show_custom_copy_menu(b, h, s))
+            ToolTip(copy_btn, _("tooltip_copy_path"))
 
             self.repo_items.append({
                 "name": repo_name_full, "widget": row_frame,
@@ -1603,6 +1599,59 @@ class GLRCApp(ctk.CTk):
         self.clipboard_clear()
         self.clipboard_append(text)
         show_custom_message(self, _("done_title"), _("path_copied"), icon_type="success")
+
+    def toggle_all_page(self):
+        """Select or deselect all repositories on the current page."""
+        state = self.header_cb_var.get()
+        for item in self.repo_items:
+            url = item["url"]
+            name = item["name"]
+            p_id = item["id"]
+            if state:
+                item["var"].set(url)
+                self.selected_repos[url] = {"name": name, "id": p_id}
+            else:
+                item["var"].set("")
+                self.selected_repos.pop(url, None)
+        self.update_selection_action_buttons()
+
+    def show_custom_copy_menu(self, btn, http_url, ssh_url):
+        """Show a themed custom popup for HTTPS/SSH copy selection."""
+        popup = ctk.CTkToplevel(self)
+        popup.overrideredirect(True)
+        popup.attributes("-topmost", True)
+        
+        # Position logic
+        x = btn.winfo_rootx()
+        y = btn.winfo_rooty() + btn.winfo_height()
+        popup.geometry(f"140x80+{x}+{y}")
+        
+        frame = ctk.CTkFrame(popup, border_width=1, border_color="gray30")
+        frame.pack(fill="both", expand=True)
+        
+        # Close on click outside (FocusOut)
+        def on_close(e=None):
+            if popup.winfo_exists():
+                popup.destroy()
+
+        popup.bind("<FocusOut>", on_close)
+        
+        btn_https = ctk.CTkButton(
+            frame, text="Copy HTTPS", fg_color="transparent", anchor="w", height=32,
+            font=ctk.CTkFont(size=12), hover_color=("gray75", "gray35"),
+            command=lambda: [self.copy_to_clip(http_url), on_close()]
+        )
+        btn_https.pack(fill="x", padx=2, pady=(2, 0))
+
+        if ssh_url:
+            btn_ssh = ctk.CTkButton(
+                frame, text="Copy SSH", fg_color="transparent", anchor="w", height=32,
+                font=ctk.CTkFont(size=12), hover_color=("gray75", "gray35"),
+                command=lambda: [self.copy_to_clip(ssh_url), on_close()]
+            )
+            btn_ssh.pack(fill="x", padx=2, pady=(0, 2))
+        
+        popup.after(10, popup.focus_set)
 
     def apply_window_icon(self, window):
         try:
