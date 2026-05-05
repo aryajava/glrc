@@ -4,6 +4,23 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
 
 ======================
 
+## version 1.5.5
+
+*UX Polish & Maintenance* — Peningkatan layout modal, pencarian internal, indikator status lokal, dan standarisasi identitas Git.
+
+### enhancement:
+- **Branch Modal Search:** Menambahkan kolom pencarian real-time di dalam modal konfigurasi branch. Pengguna kini bisa memfilter daftar repositori terpilih untuk mencari repo spesifik dengan cepat.
+- **Local/Cloud Status Indicators:** Implementasi ikon visual pada daftar utama. Ikon 📂 (Folder) menunjukkan repo sudah ada di lokal, sementara ☁️ (Cloud) menunjukkan repo hanya ada di remote.
+- **Advanced Result Dialog:** 
+  1. **Show Failed Only:** Toggle untuk menyaring hasil agar hanya menampilkan repositori yang gagal di-clone/pull.
+  2. **Copy All Logs:** Tombol baru untuk menyalin seluruh log proses ke clipboard dalam satu klik.
+  3. **Visual Error Highlights:** Repositori yang gagal kini ditandai dengan warna merah dan border tegas pada dialog hasil.
+- **Simplified Repo Names:** Tampilan nama repositori di modal kini hanya menunjukkan segmen terakhir (nama project) agar lebih bersih. Tooltip tetap menyediakan path lengkap untuk referensi.
+- **Layout Alignment Fix:** Standarisasi lebar kolom (`COL_WIDTHS`) dan perbaikan padding (24px) untuk memastikan keselarasan visual antara baris Bulk Apply dan daftar repositori.
+- **Git Identity Enforcement:** Memastikan setiap proses clone/pull otomatis menjalankan `git config --local user.name` dan `user.email` sesuai profil GitLab yang login, tanpa mengganggu konfigurasi global.
+
+======================
+
 ## version 1.5.4
 
 *Hotfix & Polish* — Perbaikan cepat untuk dependensi pystray dan bug dialog.

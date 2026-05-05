@@ -89,10 +89,11 @@ Berisi semua konstanta yang digunakan dalam aplikasi:
 2. ✅ **Config Migration**: File `config.dat` (biner) telah digantikan oleh `config.json` yang lebih standar untuk pengaturan aplikasi.
 3. ✅ **Asset Reorganization**: Memindahkan font dan ikon ke folder `assets/` agar root project lebih bersih.
 
-### Peningkatan Terbaru v1.5.3 - v1.5.4:
+### Peningkatan Terbaru v1.5.3 - v1.5.5:
 1. ✅ **Change Confirmation**: Implementasi *dirty checking* pada modal pengaturan.
 2. ✅ **Localization Audit**: Audit total i18n untuk memastikan tidak ada lagi teks hardcode.
-3. ✅ **Dependency Hardening**: Penanganan error jika modul opsional seperti `pystray` tidak ditemukan.
+3. ✅ **UX Polish (v1.5.5)**: Penambahan fitur pencarian modal, indikator status Cloud/Folder, dan dialog hasil yang lebih informatif.
+4. ✅ **Standardisasi Nama**: Implementasi penyederhanaan nama repo di modal dengan sistem tooltip path lengkap.
 
 ---
 

@@ -89,10 +89,11 @@ Contains all constants used across the application:
 2. ✅ **Config Migration**: Binary `config.dat` replaced by standard `config.json` for application settings.
 3. ✅ **Asset Reorganization**: Moved fonts and icons to the `assets/` folder for a cleaner project root.
 
-### Recent Enhancements v1.5.3 - v1.5.4:
+### Recent Enhancements v1.5.3 - v1.5.5:
 1. ✅ **Change Confirmation**: Implemented "dirty checking" in settings modals.
 2. ✅ **Localization Audit**: Complete i18n audit to eliminate hardcoded strings.
-3. ✅ **Dependency Hardening**: Graceful handling for missing optional modules like `pystray`.
+3. ✅ **UX Polish (v1.5.5)**: Added modal search, Cloud/Folder status indicators, and enhanced result dialogs.
+4. ✅ **Name Standardization**: Simplified repository names in modals with a full-path tooltip system.
 
 ---
 

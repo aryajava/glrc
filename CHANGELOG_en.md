@@ -4,6 +4,23 @@ All algorithmic modifications, architectural restructurings, bugfixes, and featu
 
 ======================
 
+## version 1.5.5
+
+*UX Polish & Maintenance* — Modal layout improvements, internal search, local status indicators, and Git identity standardization.
+
+### enhancement:
+- **Branch Modal Search:** Added a real-time search field within the branch configuration modal. Users can now filter selected repositories to quickly find specific ones.
+- **Local/Cloud Status Indicators:** Implemented visual icons in the main list. The 📂 (Folder) icon indicates the repo exists locally, while ☁️ (Cloud) indicates it is remote-only.
+- **Advanced Result Dialog:** 
+  1. **Show Failed Only:** A toggle to filter results, showing only repositories that failed to clone/pull.
+  2. **Copy All Logs:** A new button to copy the entire process log to the clipboard with one click.
+  3. **Visual Error Highlights:** Failed repositories are now highlighted in red with a distinct border in the results dialog.
+- **Simplified Repo Names:** Repository names in modals now display only the last segment (project name) for a cleaner UI. Tooltips still provide the full path for reference.
+- **Layout Alignment Fix:** Standardized column widths (`COL_WIDTHS`) and fixed padding (24px) to ensure visual alignment between the Bulk Apply row and the repository list.
+- **Git Identity Enforcement:** Ensures every clone/pull process automatically runs `git config --local user.name` and `user.email` based on the logged-in GitLab profile, without affecting global settings.
+
+======================
+
 ## version 1.5.4
 
 *Hotfix & Polish* — Quick fixes for pystray dependency and dialog bugs.
