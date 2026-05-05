@@ -23,8 +23,12 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
 - **Date Formatting:** Integrasi helper untuk memformat timestamp GitLab menjadi format yang mudah dibaca (DD MMM YYYY).
 - **UI Refactoring & Header Checkbox:** Menghapus tombol 'Select All' dan 'Deselect All'. Sebagai gantinya, ditambahkan Checkbox pada header tabel untuk melakukan seleksi cepat satu halaman.
 - **Themed Copy Menu:** Mengganti menu native (tk.Menu) pada aksi 'Copy' dengan popup kustom yang mendukung tema gelap/terang aplikasi.
-- **Improved Alignment:** Penambahan `minsize` eksplisit pada setiap kolom untuk menjamin presisi alignment antar header dan baris data.
-- **Layout Optimization:** Menata ulang posisi tombol 'Export' dan 'Workspace Tools' ke sisi kanan untuk tampilan yang lebih bersih.
+- **Improved Alignment & Radius:** Penambahan `minsize` eksplisit pada setiap kolom dan penyatuan header ke dalam satu kontainer rounded (`table_box`) untuk menjamin presisi alignment dan estetika radius sudut yang simetris.
+- **Selection Logic Fixes:** 
+  - Reset seleksi otomatis saat melakukan pencarian baru untuk mencegah data lama "nyangkut".
+  - Sinkronisasi status tombol **Export** yang lebih akurat.
+- **Dynamic Selection Counter:** Tombol **Export** kini menampilkan jumlah repositori yang sedang dipilih secara real-time (contoh: "Export (5)").
+- **Layout Optimization:** Menata ulang posisi tombol 'Export' dan 'Workspace Tools' ke sisi kanan serta memperbaiki padding baris data agar lebih lega.
 - **Last Activity Source:** Penjelasan pada tooltip bahwa data diambil dari aktivitas terakhir proyek secara keseluruhan di GitLab (bukan hanya default branch).
 
 ======================

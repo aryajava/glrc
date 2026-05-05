@@ -9,38 +9,18 @@ All algorithmic modifications, architectural restructurings, bugfixes, and featu
 *Dashboard Style & Multi-Column Table* — Total overhaul of the repository list into an informative table and updated visual status indicators.
 
 ### enhancement:
-- **Multi-Column Table Layout:** Transformed the repository list into a 6-column table:
-  1. **Checkbox:** For bulk selection.
-  2. **Project Name:** Project name with bold and large font.
-  3. **Namespace/Group:** Group path with small font and gray color.
-  4. **Status:** Visual Cloud vs Local indicators using new Material Icons.
-  5. **Last Activity:** Displays the last commit date from GitLab.
-  6. **Quick Actions:** Fast access to open the repo in a browser or copy clone links (HTTPS/SSH).
-- **New Material Status Icons:**
-  - `cloud_download` (e2c0) for repositories that are already local.
-  - `cloud` (e2bd) for repositories that have not yet been cloned.
-- **Quick Action Tooltips:** Added informative tooltips for every quick action in the repository row.
+- **Multi-Column Table Layout:** Transformed the repository list from a single-row list into a 6-column table (Checkbox, Project Name, Namespace, Status, Last Activity, Quick Actions).
+- **New Material Status Icons:** Uses `cloud_download` (e2c0) for local repos and `cloud` (e2bd) for remote repos.
+- **UI Refactoring & Header Checkbox:** Removed 'Select All' and 'Deselect All' buttons. Added a Checkbox in the table header for quick single-page selection.
+- **Themed Copy Menu:** Replaced the native menu with a custom themed popup supporting dark/light modes.
+- **Improved Alignment & Radius:** Added explicit `minsize` to every column and unified the header into a single rounded container (`table_box`) for symmetric corner aesthetics.
+- **Selection Logic Fixes:** 
+  - Automatic selection reset when performing a new search to prevent "stale" data persistence.
+  - More accurate synchronization of the **Export** button status.
+- **Dynamic Selection Counter:** The **Export** button now displays the number of currently selected repositories in real-time (e.g., "Export (5)").
+- **Layout Optimization:** Repositioned action buttons and improved data row padding for a cleaner, spacious look.
 - **Date Formatting:** Integrated a helper to format GitLab timestamps into a human-readable format (DD MMM YYYY).
 
-======================
-
-## version 1.5.6
-
-*Dashboard Style & Multi-Column Table* — Total overhaul of the repository list into an informative table and updated visual status indicators.
-
-### enhancement:
-- **Multi-Column Table Layout:** Transformed the repository list into a 6-column table:
-  1. **Checkbox:** For bulk selection.
-  2. **Project Name:** Project name with bold and large font.
-  3. **Namespace/Group:** Group path with small font and gray color.
-  4. **Status:** Visual Cloud vs Local indicators using new Material Icons.
-  5. **Last Activity:** Displays the last commit date from GitLab.
-  6. **Quick Actions:** Fast access to open the repo in a browser or copy clone links (HTTPS/SSH).
-- **New Material Status Icons:**
-  - `cloud_download` (e2c0) for repositories that are already local.
-  - `cloud` (e2bd) for repositories that have not yet been cloned.
-- **Quick Action Tooltips:** Added informative tooltips for every quick action in the repository row.
-- **Date Formatting:** Integrated a helper to format GitLab timestamps into a human-readable format (DD MMM YYYY).
 
 ======================
 

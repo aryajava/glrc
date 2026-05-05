@@ -1912,7 +1912,7 @@ class GLRCApp(ctk.CTk):
         footer = ctk.CTkFrame(form, fg_color="transparent")
         footer.pack(fill="x", pady=(15, 0))
         
-        ver_lbl = ctk.CTkLabel(footer, text=_("app_version_lbl", version="1.5.4"), 
+        ver_lbl = ctk.CTkLabel(footer, text=_("app_version_lbl", version=self.app_version), 
                                font=ctk.CTkFont(family="Open Sans", size=11), text_color=colors["muted"])
         ver_lbl.pack(side="left")
         
