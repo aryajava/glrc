@@ -945,29 +945,30 @@ class GLRCApp(ctk.CTk):
 
         # Push Workspace Tools & Export to the right
         self.btn_workspace_tools = ctk.CTkButton(action_frame, text=_("workspace_tools"), font=ctk.CTkFont(family="Open Sans"), height=32, compound="left", fg_color="#2980b9", hover_color="#1f618d", command=self.open_workspace_tools_modal)
-        self.btn_workspace_tools.pack(side="right", padx=(0, 6))
+        self.btn_workspace_tools.pack(side="right", padx=(5, 0))
         ToolTip(self.btn_workspace_tools, _("tooltip_workspace_tools"))
 
         self.btn_export = ctk.CTkButton(action_frame, text=_("btn_export"), font=ctk.CTkFont(family="Open Sans"), height=32, image=self.icon_export_img, compound="left", fg_color="gray40", hover_color="gray30", command=self.export_workspace)
-        self.btn_export.pack(side="right", padx=(6, 0))
+        self.btn_export.pack(side="right", padx=(5, 5))
         ToolTip(self.btn_export, _("tooltip_btn_export"))
 
-        # --- Table Container (Header + Scrollable List) ---
-        table_container = ctk.CTkFrame(step2_frame, fg_color="transparent")
-        table_container.pack(padx=10, pady=(6, 6), fill="both", expand=True)
+        # --- Table Box (Unified Header + List) ---
+        self.table_box = ctk.CTkFrame(step2_frame, corner_radius=10, fg_color=("gray85", "gray20"), border_width=1, border_color=("gray75", "gray30"))
+        self.table_box.pack(padx=10, pady=(6, 6), fill="both", expand=True)
 
         # --- Table Header ---
-        self.table_header = ctk.CTkFrame(table_container, fg_color=("gray85", "gray25"), height=36, corner_radius=6)
-        self.table_header.pack(fill="x", pady=(0, 2))
-        # Column weights - matching the rows
-        self.table_header.grid_columnconfigure(0, minsize=45) # CB
-        self.table_header.grid_columnconfigure(1, weight=3, minsize=240)   # Name
-        self.table_header.grid_columnconfigure(2, weight=2, minsize=180)   # Namespace
+        self.table_header = ctk.CTkFrame(self.table_box, fg_color="transparent", height=40, corner_radius=0)
+        self.table_header.pack(fill="x", pady=(2, 0))
+        
+        # Column weights - matching the rows EXACTLY
+        self.table_header.grid_columnconfigure(0, minsize=48) # CB
+        self.table_header.grid_columnconfigure(1, weight=3, minsize=240) # Name
+        self.table_header.grid_columnconfigure(2, weight=2, minsize=180) # Namespace
         self.table_header.grid_columnconfigure(3, minsize=60) # Status
         self.table_header.grid_columnconfigure(4, minsize=145) # Activity
         self.table_header.grid_columnconfigure(5, minsize=120) # Actions
-        self.table_header.grid_columnconfigure(6, minsize=16)  # Scrollbar Spacer
-        
+        self.table_header.grid_columnconfigure(6, minsize=14)  # Scrollbar Space
+
         # Header Labels (using bold font)
         hdr_font = ctk.CTkFont(family="Open Sans", size=12, weight="bold")
         
@@ -976,19 +977,19 @@ class GLRCApp(ctk.CTk):
             self.table_header, text="", width=24, height=24,
             variable=self.header_cb_var, command=self.toggle_all_page
         )
-        self.header_cb.grid(row=0, column=0, padx=(12, 0))
+        self.header_cb.grid(row=0, column=0, padx=(14, 0), pady=8)
         ToolTip(self.header_cb, _("tooltip_select_all"))
 
-        ctk.CTkLabel(self.table_header, text=_("col_name"), font=hdr_font).grid(row=0, column=1, sticky="w", padx=(10, 0))
-        ctk.CTkLabel(self.table_header, text=_("col_namespace"), font=hdr_font).grid(row=0, column=2, sticky="w", padx=(10, 0))
-        ctk.CTkLabel(self.table_header, text=_("col_status"), font=hdr_font).grid(row=0, column=3)
-        ctk.CTkLabel(self.table_header, text=_("col_activity"), font=hdr_font).grid(row=0, column=4, sticky="w")
-        ctk.CTkLabel(self.table_header, text=_("col_actions"), font=hdr_font).grid(row=0, column=5)
-        ctk.CTkLabel(self.table_header, text="", width=16).grid(row=0, column=6) # Spacer
+        ctk.CTkLabel(self.table_header, text=_("col_name"), font=hdr_font).grid(row=0, column=1, sticky="w", padx=(12, 0), pady=8)
+        ctk.CTkLabel(self.table_header, text=_("col_namespace"), font=hdr_font).grid(row=0, column=2, sticky="w", padx=(12, 0), pady=8)
+        ctk.CTkLabel(self.table_header, text=_("col_status"), font=hdr_font).grid(row=0, column=3, pady=8)
+        ctk.CTkLabel(self.table_header, text=_("col_activity"), font=hdr_font).grid(row=0, column=4, sticky="w", pady=8)
+        ctk.CTkLabel(self.table_header, text=_("col_actions"), font=hdr_font).grid(row=0, column=5, pady=8)
+        ctk.CTkLabel(self.table_header, text="", width=14).grid(row=0, column=6) # Spacer
 
         # --- Scrollable List Repo ---
-        self.scroll_frame = ctk.CTkScrollableFrame(table_container, corner_radius=6)
-        self.scroll_frame.pack(fill="both", expand=True)
+        self.scroll_frame = ctk.CTkScrollableFrame(self.table_box, fg_color="transparent", corner_radius=0)
+        self.scroll_frame.pack(fill="both", expand=True, padx=2, pady=(0, 2))
 
         # --- Pagination ---
         self.pagination_frame = ctk.CTkFrame(step2_frame, fg_color="transparent")
@@ -1502,8 +1503,8 @@ class GLRCApp(ctk.CTk):
             row_frame = ctk.CTkFrame(self.scroll_frame, fg_color="transparent")
             row_frame.pack(fill="x", pady=2, padx=2)
             
-            # Grid config to match header
-            row_frame.grid_columnconfigure(0, minsize=45)
+            # Grid config to match header EXACTLY
+            row_frame.grid_columnconfigure(0, minsize=48)
             row_frame.grid_columnconfigure(1, weight=3, minsize=240)
             row_frame.grid_columnconfigure(2, weight=2, minsize=180)
             row_frame.grid_columnconfigure(3, minsize=60)
@@ -1516,7 +1517,7 @@ class GLRCApp(ctk.CTk):
                 variable=var, onvalue=http_url, offvalue="",
                 command=on_toggle, width=24, height=24
             )
-            cb.grid(row=0, column=0, padx=(12, 0))
+            cb.grid(row=0, column=0, padx=(14, 0), pady=4)
 
             # C1: Project Name (Bold/Large)
             name_lbl = ctk.CTkLabel(
@@ -1524,7 +1525,7 @@ class GLRCApp(ctk.CTk):
                 font=ctk.CTkFont(family="Open Sans", size=13, weight="bold"),
                 anchor="w"
             )
-            name_lbl.grid(row=0, column=1, sticky="w", padx=(10, 0))
+            name_lbl.grid(row=0, column=1, sticky="w", padx=(12, 0), pady=4)
             ToolTip(name_lbl, repo_name_full)
 
             # C2: Namespace/Group (Small/Gray)
@@ -1533,13 +1534,13 @@ class GLRCApp(ctk.CTk):
                 font=ctk.CTkFont(family="Open Sans", size=11),
                 text_color="gray", anchor="w"
             )
-            ns_lbl.grid(row=0, column=2, sticky="w", padx=(10, 0))
+            ns_lbl.grid(row=0, column=2, sticky="w", padx=(12, 0), pady=4)
             ToolTip(ns_lbl, namespace)
 
             # C3: Status Icon
             status_icon = self.icon_cloud_done_img if is_local else self.icon_cloud_img
             status_lbl = ctk.CTkLabel(row_frame, text="", image=status_icon)
-            status_lbl.grid(row=0, column=3)
+            status_lbl.grid(row=0, column=3, pady=4)
             ToolTip(status_lbl, "Local (Already Cloned)" if is_local else "Remote (Cloud)")
 
             # C4: Last Activity
@@ -1549,12 +1550,12 @@ class GLRCApp(ctk.CTk):
                 font=ctk.CTkFont(family="Open Sans", size=11),
                 text_color="gray"
             )
-            activity_lbl.grid(row=0, column=4, sticky="w")
+            activity_lbl.grid(row=0, column=4, sticky="w", pady=4)
             ToolTip(activity_lbl, _("tooltip_last_activity"))
 
             # C5: Quick Actions
             actions_frame = ctk.CTkFrame(row_frame, fg_color="transparent")
-            actions_frame.grid(row=0, column=5)
+            actions_frame.grid(row=0, column=5, pady=4)
 
             # Web Button
             web_btn = ctk.CTkButton(
