@@ -264,6 +264,7 @@ _translations = {
         "tooltip_open_web": "Open in Web Browser",
         "tooltip_copy_https": "Copy HTTPS Clone URL",
         "tooltip_copy_ssh": "Copy SSH Clone URL",
+        "tooltip_last_activity": "Last activity in the project (any branch/action)",
     },
     "id": {
         # General
@@ -525,6 +526,7 @@ _translations = {
         "tooltip_open_web": "Buka di Browser",
         "tooltip_copy_https": "Salin URL Clone HTTPS",
         "tooltip_copy_ssh": "Salin URL Clone SSH",
+        "tooltip_last_activity": "Aktivitas terakhir di proyek (semua branch/aksi)",
     }
 }
 

@@ -21,6 +21,8 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
   - `cloud` (e2bd) untuk repositori yang belum pernah di-clone.
 - **Quick Action Tooltips:** Penambahan tooltip informatif pada setiap aksi cepat di baris repositori.
 - **Date Formatting:** Integrasi helper untuk memformat timestamp GitLab menjadi format yang mudah dibaca (DD MMM YYYY).
+- **UI Polish & Alignment:** Perbaikan presisi alignment antar kolom, pemindahan header ke posisi 'Repository List' untuk efisiensi ruang, dan penambahan spacer untuk mengimbangi scrollbar.
+- **Last Activity Source:** Penjelasan pada tooltip bahwa data diambil dari aktivitas terakhir proyek secara keseluruhan di GitLab (bukan hanya default branch).
 
 ======================
 
