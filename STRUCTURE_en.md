@@ -1,83 +1,99 @@
-# GLRC Project Structure
+# GLRC: GitLab Repo Cloner - Project Structure
 
-## Directory Structure
+## Folder Structure
 
 ```
 MyRepoManager/
-├── src/                          # Main modular source code
-│   ├── __init__.py
-│   ├── constants.py             # Application constants (icons, dimensions, API constraints)
+├── assets/                       # Visual assets and typography
+│   ├── fonts/                   # Font files (Open Sans, Material Icons)
+│   ├── icons/                   # App logos (ico, png, svg)
+│   └── img/                     # Documentation screenshots
+│
+├── src/                          # Main source code (modular)
+│   ├── __init__.py              # Package Initialization
+│   ├── constants.py             # App constants (icons, dimensions, etc.)
 │   │
-│   ├── core/                    # Core business logic layer
+│   ├── core/                    # Business Logic Layer
 │   │   ├── __init__.py
-│   │   ├── config_manager.py   # Manages base config and Native OS Keyring credentials
-│   │   ├── gitlab_api.py       # GitLab API Network Operations
-│   │   └── git_operations.py   # Subprocess Git execution (clone, pull, checkout)
+│   │   ├── config_manager.py   # Config management (config.json) & Vault (Keyring)
+│   │   ├── gitlab_api.py       # GitLab API network operations
+│   │   └── git_operations.py   # Git sync execution (clone, pull, checkout)
 │   │
-│   ├── ui/                      # Segmented UI components (future decoupling target)
+│   ├── ui/                      # UI components (future expansion)
 │   │   └── __init__.py
 │   │
-│   └── utils/                   # Shared utility logic
+│   └── utils/                   # Support utilities
 │       ├── __init__.py
-│       ├── dialogs.py          # Custom GUI dialogs (show_info, show_error)
-│       ├── helpers.py          # Functional helpers (center_window, ToolTip)
-│       └── i18n.py             # Internalization strings map (Bilingual Dictionary)
+│       ├── dialogs.py          # Custom Dialog functions (info, error, confirmation)
+│       ├── helpers.py          # Helper functions (center_window, ToolTip)
+│       └── i18n.py             # Internationalization support (EN/ID)
 │
-├── main.py                      # Main Python Entry Point (GUI Bootloader)
-├── requirements.txt             # Python Library External Dependencies
-├── build.bat / build.sh        # PyInstaller Native Compilers
-├── default_lang.txt            # Localized language runtime cache
-├── config.dat                  # Base configuration properties
-│
-├── MaterialIcons-Regular.ttf   # Bundled Font Artifacts
-├── OpenSans-Regular.ttf
-├── OpenSans-Bold.ttf
-├── logo.png / logo.ico        # Branding Icons
-│
-└── README.md                   # Repositories Landing Page
+├── main.py                      # App entry point (GLRCApp class)
+├── requirements.txt             # Python dependencies
+├── VERSION                      # Current version record
+├── CHANGELOG.md                 # Change history (ID)
+├── CHANGELOG_en.md              # Change history (EN)
+├── build.bat / build.sh        # Executable build scripts
+└── default_lang.txt            # Default language setting
 ```
 
-## Modular Description
+## Module Description
 
 ### 1. `src/constants.py`
-Container for every hardcoded GUI elements and connection states:
-- Material Icons hexadecimal mapping
-- Layout Window dimensions
-- Git API Pagination rules
-- Network connection retry limiters
+Contains all constants used across the application:
+- Material Icons mapping
+- Window dimensions (login/expanded)
+- Pagination settings
+- Retry attempts and delays
 
 ### 2. `src/core/` - Business Logic Layer
 
 #### `config_manager.py`
-- Parses non-sensitive parameters over to user's config folder hierarchy.
-- Re-routes PAT (Personal Access Token) strictly towards native OS Vault components (`keyring`).
+- Manages reading and writing global configurations.
+- **Modern Security**: Utilizes `keyring` (OS-native vault) to store PAT securely, replacing legacy manual encryption systems.
+- **Storage**: Non-sensitive settings are stored in `config.json`.
 
 #### `gitlab_api.py`
-- Houses `GitLabAPI` instance for raw HTTP Requests handling.
-- Performs connectivity validations and parses nested paginations natively.
+- `GitLabAPI` class for all GitLab API interactions.
+- Methods: `test_connection()`, `fetch_all_projects()`, `get_repository_branches()`.
 
 #### `git_operations.py`
-- Subprocess commander (`GitOperations`) running shell variables.
-- Dynamically validates `.git` paths to determine clone, pull, and branch strategies.
+- `GitOperations` class for low-level Git actions.
+- Methods: `clone_repository()`, `pull_repository()`, `create_new_branch()`, `is_git_repository()`.
+- Supports *Graceful Cancellation* via `threading.Event()`.
 
 ### 3. `src/utils/` - Utilities Layer
 
 #### `dialogs.py`
-- Instantiates TopLevel modals preventing total app hang/freeze states.
+- Custom dialog functions supporting dark/light themes and localization.
+- `show_info()`, `show_warning()`, `show_error()`, `show_confirmation()`.
+
+#### `helpers.py`
+- `center_window()` - Centers windows on the screen.
+- `ToolTip` class - Provides hover information for widgets.
 
 #### `i18n.py`
-- Native lookup dictionary translating contextual parameters.
-- Replaces raw hardcoded UI bindings into variable pointers `_("...text")`.
+- Main internationalization engine.
+- Supports: English (EN) and Indonesian (ID).
+- Contains the central translation dictionary mapped via the `_()` function.
 
 ### 4. `main.py`
-- The monolithic parent shell wrapping CustomTkinter window objects.
+- Main application Entry Point.
+- `GLRCApp` class - Manages the main window lifecycle and UI workflow.
+- Implements *System Tray* integration using `pystray`.
+
+## Architectural Evolution
+
+### Modernization v1.3.0+:
+1. ✅ **Security Overhaul**: Migrated from Windows-only DPAPI to `keyring` supporting cross-platform (Windows, macOS, Linux).
+2. ✅ **Config Migration**: Binary `config.dat` replaced by standard `config.json` for application settings.
+3. ✅ **Asset Reorganization**: Moved fonts and icons to the `assets/` folder for a cleaner project root.
+
+### Recent Enhancements v1.5.3 - v1.5.4:
+1. ✅ **Change Confirmation**: Implemented "dirty checking" in settings modals.
+2. ✅ **Localization Audit**: Complete i18n audit to eliminate hardcoded strings.
+3. ✅ **Dependency Hardening**: Graceful handling for missing optional modules like `pystray`.
 
 ---
 
-## Future Blueprint Scaling
-
-Planned technical expansions projected under v2.0.0 Refactoring overhaul:
-1. Slicing monolithic `main.py` UI codes into chunked classes within `src/ui/`
-2. Decoupling Event Logic variables from visual grids.
-3. Injection of test coverage matrices inside `/tests/`
-4. Automated native Release Packaging via InnoSetup (Installer wrappers).
+**Note**: This structure is designed to balance modularity and maintainability, ideal for medium-scale projects like GLRC.

@@ -1582,7 +1582,7 @@ class GLRCApp(ctk.CTk):
                 expiry_str = new_str
                 days_rem = days
                 dur_lbl.configure(text=new_str)
-                show_custom_message(modal, "Info", _("duration_updated"), icon_type="success")
+                show_custom_message(modal, _("done_title"), _("duration_updated"), icon_type="success")
 
         ctk.CTkButton(edit_frame, text=_("update"), width=80, height=32, command=save_dur, font=ctk.CTkFont(family="Open Sans")).pack(side="left", padx=(10, 0))
 
@@ -1649,7 +1649,7 @@ class GLRCApp(ctk.CTk):
         ctk.CTkOptionMenu(ws_row, variable=recent_limit_var, values=["5", "10", "20"], width=80).pack(side="left", padx=10)
         
         def clear_history():
-            if show_confirm(modal, _("warning"), _("confirm_clear_history")):
+            if show_confirmation(modal, _("warning"), _("confirm_clear_history")):
                 self.config.clear_recent_workspaces()
                 show_info(modal, _("ok"), _("history_cleared"))
 
@@ -1730,7 +1730,7 @@ class GLRCApp(ctk.CTk):
         footer = ctk.CTkFrame(form, fg_color="transparent")
         footer.pack(fill="x", pady=(15, 0))
         
-        ver_lbl = ctk.CTkLabel(footer, text=_("app_version_lbl", version="1.5.3"), 
+        ver_lbl = ctk.CTkLabel(footer, text=_("app_version_lbl", version="1.5.4"), 
                                font=ctk.CTkFont(family="Open Sans", size=11), text_color=colors["muted"])
         ver_lbl.pack(side="left")
         

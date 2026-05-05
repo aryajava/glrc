@@ -4,6 +4,17 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
 
 ======================
 
+## version 1.5.4
+
+*Hotfix & Polish* — Perbaikan cepat untuk dependensi pystray dan bug dialog.
+
+### bugfix:
+- **Dependency Fix:** Mengatasi isu `pystray cannot find module` dengan memastikan library terinstal di lingkungan eksekusi.
+- **Reference Fix:** Memperbaiki typo `show_confirm` menjadi `show_confirmation` pada fungsi pembersihan riwayat.
+- **Localization:** Melokalisasi judul dialog sukses yang sebelumnya masih tertulis hardcode "Info".
+
+======================
+
 ## version 1.5.3
 
 *Stability & Full Localization* — Patch final untuk stabilitas UI, pencegahan kehilangan data melalui sistem konfirmasi, dan audit lokalisasi (i18n) menyeluruh.

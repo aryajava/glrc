@@ -4,6 +4,17 @@ All algorithmic modifications, architectural restructurings, bugfixes, and featu
 
 ======================
 
+## version 1.5.4
+
+*Hotfix & Polish* — Quick fixes for pystray dependency and dialog bugs.
+
+### bugfix:
+- **Dependency Fix:** Resolved `pystray cannot find module` by ensuring the library is installed in the execution environment.
+- **Reference Fix:** Fixed `show_confirm` typo to `show_confirmation` in the history clearing function.
+- **Localization:** Localized the hardcoded "Info" success dialog title.
+
+======================
+
 ## version 1.5.3
 
 *Stability & Full Localization* — Final patch for UI stability, data loss prevention via confirmation system, and a comprehensive localization (i18n) audit.
