@@ -131,6 +131,15 @@ def middle_truncate(text: str, max_length: int = 50) -> str:
     half_len = (max_length - 3) // 2
     return text[:half_len] + "..." + text[-half_len:]
 
+def get_last_path_segment(path: str) -> str:
+    """
+    Returns the last segment of a repository path.
+    Example: "group/subgroup/project" -> "project"
+    """
+    if not path:
+        return ""
+    return path.rstrip("/").split("/")[-1]
+
 def parse_raw_repo_text(raw_text: str) -> set:
     """
     Cleans up a raw block of text (e.g. from copy-paste) into a set of unique repository paths.

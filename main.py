@@ -1439,10 +1439,20 @@ class GLRCApp(ctk.CTk):
             self.set_ui_loading_state(False)
             return
 
+        dest_folder = self.dest_entry.get().strip()
         for project in projects:
             repo_name = project['path_with_namespace']
             http_url = project['http_url_to_repo']
             project_id = project['id']
+
+            # Determine if folder exists locally
+            repo_folder_name = http_url.rstrip("/").split("/")[-1]
+            if repo_folder_name.endswith(".git"):
+                repo_folder_name = repo_folder_name[:-4]
+            
+            is_local = os.path.isdir(os.path.join(dest_folder, repo_folder_name)) if dest_folder else False
+            icon = "📂 " if is_local else "☁️ "
+            display_text = f"{icon}{repo_name}"
 
             is_selected = http_url in self.selected_repos
             var = tk.StringVar(value=http_url if is_selected else "")
@@ -1455,7 +1465,7 @@ class GLRCApp(ctk.CTk):
                 self.update_selection_action_buttons()
 
             cb = ctk.CTkCheckBox(
-                self.scroll_frame, text=repo_name,
+                self.scroll_frame, text=display_text,
                 variable=var, onvalue=http_url, offvalue="",
                 command=on_toggle
             )
@@ -2673,6 +2683,26 @@ class GLRCApp(ctk.CTk):
             font=ctk.CTkFont(family="Open Sans", size=17, weight="bold")
         ).pack(side="left")
 
+        # --- Search Box in Modal ---
+        search_modal_var = tk.StringVar()
+        search_modal_entry = ctk.CTkEntry(
+            hdr_frame, placeholder_text=_("search_modal_placeholder"),
+            width=220, textvariable=search_modal_var
+        )
+        search_modal_entry.pack(side="right", padx=(10, 0))
+
+        def on_modal_search(*args):
+            query = search_modal_var.get().lower().strip()
+            if not hasattr(modal, 'repo_rows'):
+                return
+            for repo_name_full, row_widget in modal.repo_rows:
+                if not query or query in repo_name_full.lower():
+                    row_widget.pack(fill="x", pady=3, padx=0)
+                else:
+                    row_widget.pack_forget()
+
+        search_modal_var.trace_add("write", on_modal_search)
+
         ctk.CTkFrame(modal, height=2, fg_color="gray30").pack(fill="x", padx=24, pady=(6, 4))
         
         # -- Info text --
@@ -2683,7 +2713,7 @@ class GLRCApp(ctk.CTk):
         ctk.CTkLabel(info_frame, text=inst_text, text_color="#154360", justify="left", font=ctk.CTkFont(family="Open Sans", size=12)).pack(padx=10, pady=8, anchor="w")
 
         # Shared column widths (must match render_branch_rows)
-        COL_WIDTHS = (260, 200, 90, 165)
+        COL_WIDTHS = (280, 200, 90, 180)
 
         # Column header — use grid so widths are exact
         col_hdr = ctk.CTkFrame(modal, fg_color="transparent")
@@ -2692,34 +2722,34 @@ class GLRCApp(ctk.CTk):
         col_hdr.columnconfigure(1, minsize=COL_WIDTHS[1])
         col_hdr.columnconfigure(2, minsize=COL_WIDTHS[2])
         col_hdr.columnconfigure(3, minsize=COL_WIDTHS[3])
-        ctk.CTkLabel(col_hdr, text=_("col_repo"),            font=ctk.CTkFont(family="Open Sans", size=12), text_color="gray", anchor="center", justify="center").grid(row=0, column=0, sticky="nsew",      padx=(4, 0))
-        ctk.CTkLabel(col_hdr, text=_("col_clone_from"),      font=ctk.CTkFont(family="Open Sans", size=12), text_color="gray", anchor="center", justify="center").grid(row=0, column=1, sticky="nsew")
-        lbl_new_branch = ctk.CTkLabel(col_hdr, text=_("col_new_branch"), font=ctk.CTkFont(family="Open Sans", size=12), text_color="gray", anchor="center", justify="center")
+        ctk.CTkLabel(col_hdr, text=_("col_repo"), font=ctk.CTkFont(family="Open Sans", size=12), text_color="gray", anchor="w").grid(row=0, column=0, sticky="w", padx=(10, 0))
+        ctk.CTkLabel(col_hdr, text=_("col_clone_from"), font=ctk.CTkFont(family="Open Sans", size=12), text_color="gray", anchor="w").grid(row=0, column=1, sticky="w", padx=(0, 0))
+        lbl_new_branch = ctk.CTkLabel(col_hdr, text=_("col_new_branch"), font=ctk.CTkFont(family="Open Sans", size=12), text_color="gray", anchor="center")
         lbl_new_branch.grid(row=0, column=2, sticky="nsew")
         ToolTip(lbl_new_branch, _("create_branch_tooltip"))
-        ctk.CTkLabel(col_hdr, text=_("col_new_branch_name"), font=ctk.CTkFont(family="Open Sans", size=12), text_color="gray", anchor="center", justify="center").grid(row=0, column=3, sticky="nsew")
+        ctk.CTkLabel(col_hdr, text=_("col_new_branch_name"), font=ctk.CTkFont(family="Open Sans", size=12), text_color="gray", anchor="w").grid(row=0, column=3, sticky="w", padx=(0, 0))
 
         # --- Bulk Apply Row ---
         bulk_row = ctk.CTkFrame(modal, fg_color="#f0f3f4", corner_radius=6)
-        bulk_row.pack(fill="x", padx=24, pady=(2, 6))
+        bulk_row.pack(fill="x", padx=27, pady=(2, 10))
         bulk_row.columnconfigure(0, minsize=COL_WIDTHS[0])
         bulk_row.columnconfigure(1, minsize=COL_WIDTHS[1])
         bulk_row.columnconfigure(2, minsize=COL_WIDTHS[2])
         bulk_row.columnconfigure(3, minsize=COL_WIDTHS[3])
         
-        ctk.CTkLabel(bulk_row, text=_("bulk_apply"), font=ctk.CTkFont(family="Open Sans", size=12, weight="bold"), text_color="#2c3e50").grid(row=0, column=0, sticky="e", padx=(4, 15), pady=8)
+        ctk.CTkLabel(bulk_row, text=_("bulk_apply"), font=ctk.CTkFont(family="Open Sans", size=12, weight="bold"), text_color="#2c3e50").grid(row=0, column=0, sticky="w", padx=(10, 15), pady=8)
         
         bulk_branch_var = ctk.StringVar(value="")
         bulk_combo = ctk.CTkEntry(bulk_row, textvariable=bulk_branch_var, width=185, placeholder_text=_("type_branch"))
-        bulk_combo.grid(row=0, column=1, sticky="w")
+        bulk_combo.grid(row=0, column=1, sticky="w", padx=(0, 4))
         
         bulk_new_enabled = tk.BooleanVar(value=False)
-        bulk_cb = ctk.CTkCheckBox(bulk_row, text="", variable=bulk_new_enabled, width=20)
+        bulk_cb = ctk.CTkCheckBox(bulk_row, text="", variable=bulk_new_enabled, width=24)
         bulk_cb.grid(row=0, column=2, sticky="w", padx=30)
         
         bulk_new_name_var = tk.StringVar(value="")
         bulk_entry = ctk.CTkEntry(bulk_row, textvariable=bulk_new_name_var, width=COL_WIDTHS[3], height=28, placeholder_text=_("placeholder_new_branch"), state="disabled")
-        bulk_entry.grid(row=0, column=3, sticky="we", padx=(0, 4))
+        bulk_entry.grid(row=0, column=3, sticky="w", padx=(0, 4))
         
         def on_bulk_cb_toggle():
             if bulk_new_enabled.get():
@@ -2840,11 +2870,15 @@ class GLRCApp(ctk.CTk):
         action_btn.configure(state="normal")
 
         # MUST match COL_WIDTHS in open_branch_config_modal header
-        C0, C1, C2, C3 = 260, 200, 90, 165
+        C0, C1, C2, C3 = 280, 200, 90, 180
 
+        modal.repo_rows = []
         for url, data in selected_repo_snapshot:
             row = ctk.CTkFrame(scroll_frame, corner_radius=8)
-            row.pack(fill="x", pady=3, padx=4)
+            row.pack(fill="x", pady=3, padx=0)
+            
+            repo_name_full = data.get("name", url)
+            modal.repo_rows.append((repo_name_full, row))
 
             # Mirror the exact same columnconfigure as the header
             row.columnconfigure(0, minsize=C0)
@@ -2853,14 +2887,15 @@ class GLRCApp(ctk.CTk):
             row.columnconfigure(3, minsize=C3)
 
             # --- Col 0: Repo name (truncated label + tooltip) ---
-            from src.utils.helpers import middle_truncate
+            from src.utils.helpers import get_last_path_segment
             name = data["name"]
+            display_name = get_last_path_segment(name)
             
             lbl = ctk.CTkLabel(
                 row, font=ctk.CTkFont(family="Open Sans", size=12, weight="bold"),
-                text=middle_truncate(name, 35), anchor="w", text_color=("gray20", "gray85")
+                text=display_name, anchor="w", text_color=("gray20", "gray85")
             )
-            lbl.grid(row=0, column=0, sticky="we", padx=(10, 4), pady=8)
+            lbl.grid(row=0, column=0, sticky="w", padx=(10, 4), pady=8)
             ToolTip(lbl, name)
 
             # --- Col 1: Branch dropdown ---
@@ -2922,9 +2957,9 @@ class GLRCApp(ctk.CTk):
             chk = ctk.CTkCheckBox(row, text="", width=24,
                                   variable=new_branch_enabled,
                                   command=toggle_branch_entry)
-            chk.grid(row=0, column=2, pady=8)
+            chk.grid(row=0, column=2, sticky="w", padx=30, pady=8)
 
-            new_branch_entry.grid(row=0, column=3, sticky="w", padx=(0, 8), pady=8)
+            new_branch_entry.grid(row=0, column=3, sticky="w", padx=(0, 4), pady=8)
 
 
     # =========================================================================
@@ -3004,7 +3039,7 @@ class GLRCApp(ctk.CTk):
         self.gagal = 0
         self.processed_count = 0
         self.total_repos = len(clone_jobs)
-        self.cloned_paths = []  # Track successfully cloned/updated repos
+        self.clone_results = []  # Track all results: {"name", "path", "success", "error"}
         self.lock = threading.Lock()
         
         clone_method = self.config.get_clone_method()
@@ -3024,8 +3059,8 @@ class GLRCApp(ctk.CTk):
             hover_color="#15692f",
             command=self.open_branch_selection_modal
         ))
-        cloned = list(self.cloned_paths)
-        self.schedule_ui(lambda: self.show_clone_result_dialog(cloned))
+        results = list(self.clone_results)
+        self.schedule_ui(lambda: self.show_clone_result_dialog(results))
 
     def _process_single_repo(self, clone_job, dest_folder, clone_method):
         if hasattr(self, 'cancel_event') and self.cancel_event.is_set():
@@ -3136,7 +3171,10 @@ class GLRCApp(ctk.CTk):
                 self.write_log(_("repo_update_success", repo_name=repo_name, branch_name=branch_name))
                 with self.lock:
                     self.sukses += 1
-                    self.cloned_paths.append((repo_name, repo_local_path))
+                    self.clone_results.append({
+                        "name": repo_name, "path": repo_local_path, 
+                        "success": True, "error": None
+                    })
 
                 # --- Buat branch baru jika diminta (saat pull) ---
                 if create_new_branch and new_branch_name:
@@ -3160,9 +3198,12 @@ class GLRCApp(ctk.CTk):
                 elif create_new_branch and not new_branch_name:
                     self.write_log(_("skip_empty_branch_name"))
             else:
-                self.write_log(_("repo_update_failed", repo_name=repo_name))
                 with self.lock:
                     self.gagal += 1
+                    self.clone_results.append({
+                        "name": repo_name, "path": repo_local_path, 
+                        "success": False, "error": _("repo_update_failed", repo_name=repo_name)
+                    })
         else:
             self.write_log(f"\n[{current_idx}/{self.total_repos}] {_('cloning_repo', repo_name=repo_name, branch_name=branch_name)}")
             clone_command = ["git", "-c", "credential.helper=", "clone", "-b", branch_name, auth_url]
@@ -3210,7 +3251,10 @@ class GLRCApp(ctk.CTk):
                 self.write_log(_("repo_clone_success", repo_name=repo_name, branch_name=branch_name))
                 with self.lock:
                     self.sukses += 1
-                    self.cloned_paths.append((repo_name, repo_local_path))
+                    self.clone_results.append({
+                        "name": repo_name, "path": repo_local_path, 
+                        "success": True, "error": None
+                    })
 
                 # --- Set git config local ---
                 self._set_git_config_local(repo_local_path, repo_name)
@@ -3238,9 +3282,12 @@ class GLRCApp(ctk.CTk):
                     self.write_log(_("skip_empty_branch_name"))
 
             else:
-                self.write_log(_("repo_clone_failed", repo_name=repo_name))
                 with self.lock:
                     self.gagal += 1
+                    self.clone_results.append({
+                        "name": repo_name, "path": repo_local_path, 
+                        "success": False, "error": _("repo_clone_failed", repo_name=repo_name)
+                    })
 
     def _set_git_config_local(self, repo_path: str, repo_name: str):
         """Set git config user.name dan user.email secara local di repo yang baru di-clone."""
@@ -3468,25 +3515,29 @@ class GLRCApp(ctk.CTk):
         except Exception as e:
             show_error(self, _("error"), _("open_ide_failed", ide=ide_name, error=str(e)))
 
-    def show_clone_result_dialog(self, cloned_paths):
-        """Show clone results with option to open repos in IDE."""
+    def show_clone_result_dialog(self, clone_results):
+        """Show clone results with option to open repos in IDE and filtering."""
         available_ides = self.detect_available_ides()
 
         modal = ctk.CTkToplevel(self)
         modal.title(_("done_title"))
 
-        has_repos = bool(cloned_paths)
-        dialog_height = 520 if has_repos else 280
-        self.configure_modal_window(modal, 680, dialog_height)
+        has_results = bool(clone_results)
+        dialog_height = 580 if has_results else 280
+        self.configure_modal_window(modal, 700, dialog_height)
 
         frame = ctk.CTkFrame(modal, fg_color="transparent")
         frame.pack(fill="both", expand=True, padx=20, pady=(20, 10))
 
-        # Success icon
-        icon_frame = ctk.CTkFrame(frame, width=50, height=50, corner_radius=25, fg_color="#2ecc71")
+        # Success/Result icon
+        any_failed = any(not r["success"] for r in clone_results)
+        icon_color = "#e67e22" if any_failed else "#2ecc71"
+        icon_symbol = "!" if any_failed else "✔"
+        
+        icon_frame = ctk.CTkFrame(frame, width=50, height=50, corner_radius=25, fg_color=icon_color)
         icon_frame.pack(pady=(0, 12))
         icon_frame.pack_propagate(False)
-        ctk.CTkLabel(icon_frame, text="✔", text_color="white",
+        ctk.CTkLabel(icon_frame, text=icon_symbol, text_color="white",
                      font=ctk.CTkFont(size=24, weight="bold")).pack(expand=True)
 
         # Summary text
@@ -3497,100 +3548,137 @@ class GLRCApp(ctk.CTk):
             justify="center", wraplength=460
         ).pack(pady=(0, 10))
 
-        # Open in IDE section — only if there are cloned repos AND IDEs found
-        if has_repos:
-            ctk.CTkFrame(frame, height=1, fg_color="gray40").pack(fill="x", pady=(4, 8))
-
+        # Open in IDE section
+        if has_results:
+            header_row = ctk.CTkFrame(frame, fg_color="transparent")
+            header_row.pack(fill="x", pady=(4, 8))
+            
             ctk.CTkLabel(
-                frame, text=_("open_in_ide_title"),
+                header_row, text=_("open_in_ide_title"),
                 font=ctk.CTkFont(family="Open Sans", size=12, weight="bold"),
                 anchor="w"
-            ).pack(fill="x")
+            ).pack(side="left")
 
-            repo_scroll = ctk.CTkScrollableFrame(frame, height=min(len(cloned_paths) * 42, 180))
+            # Filter toggle
+            filter_var = tk.BooleanVar(value=False)
+            filter_cb = ctk.CTkCheckBox(
+                header_row, text=_("show_failed_only"), 
+                variable=filter_var, font=ctk.CTkFont(family="Open Sans", size=11),
+                checkbox_width=18, checkbox_height=18
+            )
+            filter_cb.pack(side="right")
+
+            repo_scroll = ctk.CTkScrollableFrame(frame, height=220)
             repo_scroll.pack(fill="both", expand=True, pady=(4, 8))
 
-            for repo_name, repo_path in cloned_paths:
+            row_widgets = []
+            from src.utils.helpers import middle_truncate, get_last_path_segment
+
+            for res in clone_results:
+                repo_name = res["name"]
+                repo_path = res["path"]
+                success = res["success"]
+                error_msg = res["error"]
+                
                 abs_repo_path = os.path.abspath(repo_path)
                 row = ctk.CTkFrame(repo_scroll, corner_radius=6)
                 row.pack(fill="x", pady=4, padx=2)
-                self.register_theme_widget(row, fg_color="subtle_panel")
-
+                
+                if not success:
+                    row.configure(border_width=1, border_color="#e74c3c")
+                
                 info_frame = ctk.CTkFrame(row, fg_color="transparent")
                 info_frame.pack(side="left", fill="x", expand=True, padx=(10, 8), pady=7)
 
-                ctk.CTkLabel(
-                    info_frame, text=repo_name,
+                display_repo_name = get_last_path_segment(repo_name)
+                
+                name_color = "#e74c3c" if not success else None
+                repo_name_lbl = ctk.CTkLabel(
+                    info_frame, text=display_repo_name,
                     font=ctk.CTkFont(family="Open Sans", size=12, weight="bold"),
-                    anchor="w"
-                ).pack(fill="x", anchor="w")
-                from src.utils.helpers import middle_truncate
-                path_label = ctk.CTkLabel(
-                    info_frame, text=middle_truncate(abs_repo_path, 72),
-                    font=ctk.CTkFont(family="Open Sans", size=10),
-                    anchor="w", text_color="gray"
+                    anchor="w", text_color=name_color
                 )
-                path_label.pack(fill="x", anchor="w")
-                ToolTip(path_label, abs_repo_path)
+                repo_name_lbl.pack(fill="x", anchor="w")
+                ToolTip(repo_name_lbl, repo_name)
 
-                copy_tooltip_text = {"value": _("tooltip_copy_path")}
-                copy_btn = ctk.CTkButton(
-                    row, text=_("copy_path_btn"), width=72, height=30,
-                    fg_color="gray40", hover_color="gray30",
-                    font=ctk.CTkFont(family="Open Sans", size=11),
-                )
-                copy_btn.pack(side="right", padx=(0, 6))
-                copy_tooltip = ToolTip(copy_btn, lambda ref=copy_tooltip_text: ref["value"])
+                if success:
+                    path_label = ctk.CTkLabel(
+                        info_frame, text=middle_truncate(abs_repo_path, 72),
+                        font=ctk.CTkFont(family="Open Sans", size=10),
+                        anchor="w", text_color="gray"
+                    )
+                    path_label.pack(fill="x", anchor="w")
+                    ToolTip(path_label, abs_repo_path)
 
-                def make_copy_handler(btn, tooltip_ref, path):
-                    def handler():
-                        self.clipboard_clear()
-                        self.clipboard_append(path)
-                        btn.configure(text=_("copied_btn"))
-                        tooltip_ref["value"] = _("path_copied")
-                        btn.after(1400, lambda: (
-                            btn.winfo_exists() and btn.configure(text=_("copy_path_btn")),
-                            tooltip_ref.update({"value": _("tooltip_copy_path")})
-                        ))
-                    return handler
+                    # IDE & Copy buttons only for success
+                    copy_tooltip_text = {"value": _("tooltip_copy_path")}
+                    copy_btn = ctk.CTkButton(
+                        row, text=_("copy_path_btn"), width=60, height=28,
+                        fg_color="gray40", hover_color="gray30",
+                        font=ctk.CTkFont(family="Open Sans", size=11),
+                    )
+                    copy_btn.pack(side="right", padx=(0, 6))
+                    
+                    def make_copy_handler(btn, path):
+                        def handler():
+                            self.clipboard_clear()
+                            self.clipboard_append(path)
+                            btn.configure(text=_("copied_btn"))
+                            btn.after(1400, lambda: btn.winfo_exists() and btn.configure(text=_("copy_path_btn")))
+                        return handler
+                    copy_btn.configure(command=make_copy_handler(copy_btn, abs_repo_path))
 
-                copy_btn.configure(command=make_copy_handler(copy_btn, copy_tooltip_text, abs_repo_path))
+                    open_btn = ctk.CTkButton(
+                        row, text=_("open_ide_btn"), image=self.open_in_new_img,
+                        compound="left", width=70, height=28,
+                        fg_color="#2980b9", hover_color="#1f618d",
+                        font=ctk.CTkFont(family="Open Sans", size=11),
+                    )
+                    open_btn.pack(side="right", padx=(0, 4))
+                    
+                    def make_menu_handler(btn, path):
+                        def handler():
+                            menu = tk.Menu(btn, tearoff=0)
+                            for ide in available_ides:
+                                menu.add_command(label=ide["name"], command=lambda c=ide, p=path: self.open_in_ide(c, p))
+                            try:
+                                menu.tk_popup(btn.winfo_rootx(), btn.winfo_rooty() + btn.winfo_height())
+                            finally:
+                                menu.grab_release()
+                        return handler
+                    open_btn.configure(command=make_menu_handler(open_btn, repo_path))
+                else:
+                    # Show error message
+                    err_lbl = ctk.CTkLabel(
+                        info_frame, text=middle_truncate(error_msg, 80),
+                        font=ctk.CTkFont(family="Open Sans", size=10, slant="italic"),
+                        anchor="w", text_color="#c0392b"
+                    )
+                    err_lbl.pack(fill="x", anchor="w")
+                    ToolTip(err_lbl, error_msg)
 
-                open_btn = ctk.CTkButton(
-                    row,
-                    text=_("open_ide_btn"),
-                    image=self.open_in_new_img,
-                    compound="left",
-                    height=30,
-                    fg_color="#2980b9", hover_color="#1f618d",
-                    font=ctk.CTkFont(family="Open Sans", size=12),
-                )
-                open_btn.pack(side="right", padx=(0, 4))
-                ToolTip(open_btn, _("tooltip_open_ide_menu"))
+                row_widgets.append((success, row))
 
-                def make_menu_handler(btn, path):
-                    def handler():
-                        menu = tk.Menu(btn, tearoff=0)
-                        for ide in available_ides:
-                            menu.add_command(
-                                label=ide["name"],
-                                command=lambda c=ide, p=path: self.open_in_ide(c, p)
-                            )
-                        # Show popup menu relative to the button
-                        try:
-                            x = btn.winfo_rootx()
-                            y = btn.winfo_rooty() + btn.winfo_height()
-                            menu.tk_popup(x, y)
-                        finally:
-                            menu.grab_release()
-                    return handler
+            def update_filter(*args):
+                show_failed_only = filter_var.get()
+                for is_success, widget in row_widgets:
+                    if show_failed_only and is_success:
+                        widget.pack_forget()
+                    else:
+                        widget.pack(fill="x", pady=4, padx=2)
+            
+            filter_var.trace_add("write", update_filter)
 
-                open_btn.configure(command=make_menu_handler(open_btn, repo_path))
-
-        # OK button
+        # Bottom buttons
         btn_frame = ctk.CTkFrame(modal, fg_color="transparent")
         btn_frame.pack(fill="x", padx=20, pady=(0, 16))
         
+        def copy_all_logs():
+            if hasattr(self, 'log_content'):
+                self.clipboard_clear()
+                self.clipboard_append(self.log_content)
+                show_custom_message(modal, _("done_title"), _("logs_copied"), icon_type="success")
+
         def export_log():
             filepath = filedialog.asksaveasfilename(
                 parent=modal,
@@ -3604,8 +3692,9 @@ class GLRCApp(ctk.CTk):
                 except Exception as e:
                     show_error(modal, _("error"), _("failed_with_err", err=e))
 
-        ctk.CTkButton(btn_frame, text=_("export_log_btn"), width=120, height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), fg_color="#2980b9", hover_color="#1f618d", command=export_log).pack(side="left", padx=5, expand=True)
-        ctk.CTkButton(btn_frame, text=_("ok"), width=120, height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=modal.destroy).pack(side="right", padx=5, expand=True)
+        ctk.CTkButton(btn_frame, text=_("export_log_btn"), width=120, height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), fg_color="gray30", hover_color="gray20", command=export_log).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text=_("copy_logs_btn"), width=120, height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), fg_color="#2980b9", hover_color="#1f618d", command=copy_all_logs).pack(side="left", padx=5)
+        ctk.CTkButton(btn_frame, text=_("ok"), width=120, height=36, font=ctk.CTkFont(family="Open Sans", weight="bold"), command=modal.destroy).pack(side="right", padx=5)
 
 
 if __name__ == "__main__":

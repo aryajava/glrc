@@ -252,6 +252,10 @@ _translations = {
         "start_clone": "Start Clone & Pull",
         "ws_preview_msg": "Workspace Preview:\n\n- Valid repositories: {valid}\n- Invalid entries (skipped): {invalid}\n\nDo you want to proceed with generation?",
         "ws_preview_title": "Workspace Preview",
+        "search_modal_placeholder": "Filter selected repositories...",
+        "copy_logs_btn": "Copy Logs",
+        "show_failed_only": "Show Failed Only",
+        "logs_copied": "Logs copied to clipboard!",
     },
     "id": {
         # General
@@ -501,6 +505,10 @@ _translations = {
         "start_clone": "Mulai Clone & Pull",
         "ws_preview_msg": "Pratinjau Workspace:\n\n- Repositori valid: {valid}\n- Entri tidak valid (dilewati): {invalid}\n\nApakah Anda ingin melanjutkan pembuatan?",
         "ws_preview_title": "Pratinjau Workspace",
+        "search_modal_placeholder": "Filter repositori terpilih...",
+        "copy_logs_btn": "Salin Log",
+        "show_failed_only": "Hanya yang Gagal",
+        "logs_copied": "Log tersalin ke clipboard!",
     }
 }
 
