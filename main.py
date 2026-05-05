@@ -664,17 +664,22 @@ class GLRCApp(ctk.CTk):
             btn.configure(state=state)
 
     def update_selection_action_buttons(self):
-        has_repos = bool(self.repo_items)
-        has_selection = bool(self.selected_repos)
-
-        for button_name, state in (
-            ("btn_select_all", "normal" if has_repos else "disabled"),
-            ("btn_deselect_all", "normal" if has_repos else "disabled"),
-            ("btn_export", "normal" if has_selection else "disabled"),
-        ):
-            button = getattr(self, button_name, None)
-            if button is not None:
-                self._set_btn_state(button, state)
+        count = len(self.selected_repos)
+        has_selection = count > 0
+        
+        # Update Export button text with count
+        base_export_text = _("btn_export")
+        new_export_text = f"{base_export_text} ({count})" if has_selection else base_export_text
+        
+        if hasattr(self, "btn_export"):
+            self.btn_export.configure(text=new_export_text)
+            self._set_btn_state(self.btn_export, "normal" if has_selection else "disabled")
+            
+            # Optional: Highlight Export button if selection exists
+            if has_selection:
+                self.btn_export.configure(fg_color="#2c3e50") # Stronger color when active
+            else:
+                self.btn_export.configure(fg_color="gray40")
 
     def schedule_ui(self, callback, delay=0):
         try:
@@ -953,12 +958,12 @@ class GLRCApp(ctk.CTk):
         ToolTip(self.btn_export, _("tooltip_btn_export"))
 
         # --- Table Box (Unified Header + List) ---
-        self.table_box = ctk.CTkFrame(step2_frame, corner_radius=10, fg_color=("gray85", "gray20"), border_width=1, border_color=("gray75", "gray30"))
+        self.table_box = ctk.CTkFrame(step2_frame, corner_radius=10, fg_color=("gray85", "gray20"), border_width=0, border_color=("gray75", "gray30"))
         self.table_box.pack(padx=10, pady=(6, 6), fill="both", expand=True)
 
         # --- Table Header ---
-        self.table_header = ctk.CTkFrame(self.table_box, fg_color="transparent", height=40, corner_radius=0)
-        self.table_header.pack(fill="x", pady=(2, 0))
+        self.table_header = ctk.CTkFrame(self.table_box, fg_color=("gray85", "gray25"), height=38, corner_radius=10)
+        self.table_header.pack(fill="x", pady=0, padx=3)
         
         # Column weights - matching the rows EXACTLY
         self.table_header.grid_columnconfigure(0, minsize=48) # CB
@@ -1171,6 +1176,11 @@ class GLRCApp(ctk.CTk):
     def trigger_search(self, event=None):
         if self.is_fetching or not self.search_entry.get().strip():
             return
+            
+        # Clear previous selection on new search to avoid "stale" selections (Fix Issue 1 & 2)
+        self.selected_repos.clear()
+        self.update_selection_action_buttons()
+        
         self.current_page = 1
         self.load_page_data()
 
