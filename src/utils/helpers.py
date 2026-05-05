@@ -3,7 +3,12 @@ Helper functions untuk GLRC Application
 """
 import customtkinter as ctk
 import tkinter as tk
-from typing import Callable, Union
+from typing import Callable, Union, Optional
+from datetime import datetime
+try:
+    from dateutil import parser
+except ImportError:
+    parser = None
 
 
 def center_window(window, width, height):
@@ -166,3 +171,18 @@ def parse_raw_repo_text(raw_text: str) -> set:
             cleaned_repos.add(line)
             
     return cleaned_repos
+
+def format_gitlab_date(iso_date: Optional[str]) -> str:
+    """Formats GitLab ISO date to a readable string."""
+    if not iso_date:
+        return "-"
+    try:
+        if parser:
+            dt = parser.parse(iso_date)
+        else:
+            # Fallback for standard isoformat
+            clean_iso = iso_date.replace("Z", "+00:00")
+            dt = datetime.fromisoformat(clean_iso)
+        return dt.strftime("%d %b %Y, %H:%M")
+    except Exception:
+        return str(iso_date)[:10]

@@ -4,6 +4,26 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
 
 ======================
 
+## version 1.5.6
+
+*Dashboard Style & Multi-Column Table* — Perombakan total layout daftar repositori menjadi tabel informatif dan pembaruan visual indikator status.
+
+### enhancement:
+- **Multi-Column Table Layout:** Mengubah daftar repositori dari list satu baris menjadi tabel 6 kolom:
+  1. **Checkbox:** Untuk seleksi bulk.
+  2. **Project Name:** Nama proyek dengan font bold dan besar.
+  3. **Namespace/Group:** Path grup dengan font kecil dan warna abu-abu.
+  4. **Status:** Indikator visual Cloud vs Local menggunakan Material Icons baru.
+  5. **Last Activity:** Menampilkan tanggal commit terakhir dari GitLab.
+  6. **Quick Actions:** Akses cepat untuk membuka repo di browser atau menyalin link clone (HTTPS/SSH).
+- **New Material Status Icons:**
+  - `cloud_download` (e2c0) untuk repositori yang sudah ada di lokal.
+  - `cloud` (e2bd) untuk repositori yang belum pernah di-clone.
+- **Quick Action Tooltips:** Penambahan tooltip informatif pada setiap aksi cepat di baris repositori.
+- **Date Formatting:** Integrasi helper untuk memformat timestamp GitLab menjadi format yang mudah dibaca (DD MMM YYYY).
+
+======================
+
 ## version 1.5.5
 
 *UX Polish & Maintenance* — Peningkatan layout modal, pencarian internal, indikator status lokal, dan standarisasi identitas Git.

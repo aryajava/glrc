@@ -17,6 +17,10 @@ ICON_CHECK_ALL = "\ue86c"
 ICON_UNCHECK_ALL = "\ue835"
 ICON_LOGS = "\ue86f"
 ICON_OPEN_IN_NEW = "\ue89f"
+ICON_CLOUD_DONE = "\ue2c0"
+ICON_CLOUD = "\ue2bd"
+ICON_COPY = "\ue14d"
+ICON_WORLD = "\ue894"
 
 # Window Dimensions
 DEFAULT_LOGIN_WIDTH = 720

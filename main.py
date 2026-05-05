@@ -28,16 +28,17 @@ from src.core.gitlab_api import GitLabAPI
 from src.core.git_operations import GitOperations
 from src.utils import i18n
 from src.utils.i18n import _
-from src.utils.helpers import center_window, ToolTip
 from src.utils.dialogs import show_custom_message, show_info, show_warning, show_error, show_confirmation
 from src.constants import (
     ICON_SETTINGS, ICON_INFO, ICON_LOGOUT, ICON_USER, ICON_VISIBILITY,
     ICON_VISIBILITY_OFF, ICON_SEARCH, ICON_RESET,
     ICON_EXPORT, ICON_IMPORT, ICON_CHECK_ALL, ICON_UNCHECK_ALL, ICON_LOGS, ICON_OPEN_IN_NEW,
+    ICON_CLOUD_DONE, ICON_CLOUD, ICON_COPY, ICON_WORLD,
     DEFAULT_LOGIN_WIDTH, DEFAULT_LOGIN_HEIGHT, DEFAULT_EXPANDED_WIDTH,
     DEFAULT_EXPANDED_HEIGHT, DEFAULT_PER_PAGE,
     MAX_CONCURRENT_CLONES, MAX_RETRY_ATTEMPTS, RETRY_DELAY_SECONDS
 )
+from src.utils.helpers import center_window, ToolTip, middle_truncate, get_last_path_segment, format_gitlab_date
 
 
 class Dimmer:
@@ -133,6 +134,10 @@ class GLRCApp(ctk.CTk):
             self.icon_uncheck_all_img = self._render_icon(ICON_UNCHECK_ALL)
             self.icon_logs_img = self._render_icon(ICON_LOGS)
             self.open_in_new_img = self._render_icon(ICON_OPEN_IN_NEW)
+            self.icon_cloud_done_img = self._render_icon(ICON_CLOUD_DONE, render_size=18)
+            self.icon_cloud_img = self._render_icon(ICON_CLOUD, render_size=18)
+            self.icon_copy_img = self._render_icon(ICON_COPY, render_size=16)
+            self.icon_world_img = self._render_icon(ICON_WORLD, render_size=16)
         except Exception as e:
             self.icon_font = None
             self._pil_icon_font = None
@@ -954,6 +959,26 @@ class GLRCApp(ctk.CTk):
         self.btn_workspace_tools.pack(side="right", padx=(0, 6))
         ToolTip(self.btn_workspace_tools, _("tooltip_workspace_tools"))
 
+        # --- Table Header ---
+        self.table_header = ctk.CTkFrame(step2_frame, fg_color="transparent", height=32)
+        self.table_header.pack(fill="x", padx=10, pady=(6, 0))
+        # Column weights
+        self.table_header.grid_columnconfigure(0, minsize=40) # CB
+        self.table_header.grid_columnconfigure(1, weight=3)   # Name
+        self.table_header.grid_columnconfigure(2, weight=2)   # Namespace
+        self.table_header.grid_columnconfigure(3, minsize=60) # Status
+        self.table_header.grid_columnconfigure(4, minsize=140) # Activity
+        self.table_header.grid_columnconfigure(5, minsize=120) # Actions
+        
+        # Header Labels (using bold font)
+        hdr_font = ctk.CTkFont(family="Open Sans", size=12, weight="bold")
+        ctk.CTkLabel(self.table_header, text="", width=30).grid(row=0, column=0)
+        ctk.CTkLabel(self.table_header, text=_("col_name"), font=hdr_font).grid(row=0, column=1, sticky="w", padx=(10, 0))
+        ctk.CTkLabel(self.table_header, text=_("col_namespace"), font=hdr_font).grid(row=0, column=2, sticky="w", padx=(10, 0))
+        ctk.CTkLabel(self.table_header, text=_("col_status"), font=hdr_font).grid(row=0, column=3)
+        ctk.CTkLabel(self.table_header, text=_("col_activity"), font=hdr_font).grid(row=0, column=4, sticky="w")
+        ctk.CTkLabel(self.table_header, text=_("col_actions"), font=hdr_font).grid(row=0, column=5)
+
         # --- Scrollable List Repo ---
         self.scroll_frame = ctk.CTkScrollableFrame(
             step2_frame, label_text=_("repo_list"),
@@ -1441,9 +1466,14 @@ class GLRCApp(ctk.CTk):
 
         dest_folder = self.dest_entry.get().strip()
         for project in projects:
-            repo_name = project['path_with_namespace']
+            repo_name_full = project['path_with_namespace']
+            repo_name_only = project['name']
+            namespace = project['namespace']['full_path']
             http_url = project['http_url_to_repo']
+            ssh_url = project.get('ssh_url_to_repo', '')
+            web_url = project.get('web_url', '')
             project_id = project['id']
+            last_activity = project.get('last_activity_at', '')
 
             # Determine if folder exists locally
             repo_folder_name = http_url.rstrip("/").split("/")[-1]
@@ -1451,28 +1481,102 @@ class GLRCApp(ctk.CTk):
                 repo_folder_name = repo_folder_name[:-4]
             
             is_local = os.path.isdir(os.path.join(dest_folder, repo_folder_name)) if dest_folder else False
-            icon = "📂 " if is_local else "☁️ "
-            display_text = f"{icon}{repo_name}"
-
+            
             is_selected = http_url in self.selected_repos
             var = tk.StringVar(value=http_url if is_selected else "")
 
-            def on_toggle(url=http_url, name=repo_name, p_id=project_id, v=var):
+            def on_toggle(url=http_url, name=repo_name_full, p_id=project_id, v=var):
                 if v.get():
                     self.selected_repos[url] = {"name": name, "id": p_id}
                 else:
                     self.selected_repos.pop(url, None)
                 self.update_selection_action_buttons()
 
+            # ROW FRAME
+            row_frame = ctk.CTkFrame(self.scroll_frame, fg_color="transparent")
+            row_frame.pack(fill="x", pady=2, padx=2)
+            
+            # Grid config to match header
+            row_frame.grid_columnconfigure(0, minsize=40)
+            row_frame.grid_columnconfigure(1, weight=3)
+            row_frame.grid_columnconfigure(2, weight=2)
+            row_frame.grid_columnconfigure(3, minsize=60)
+            row_frame.grid_columnconfigure(4, minsize=140)
+            row_frame.grid_columnconfigure(5, minsize=120)
+
+            # C0: Checkbox
             cb = ctk.CTkCheckBox(
-                self.scroll_frame, text=display_text,
+                row_frame, text="",
                 variable=var, onvalue=http_url, offvalue="",
-                command=on_toggle
+                command=on_toggle, width=24, height=24
             )
-            cb.pack(anchor="w", pady=4, padx=10)
+            cb.grid(row=0, column=0, padx=(10, 0))
+
+            # C1: Project Name (Bold/Large)
+            name_lbl = ctk.CTkLabel(
+                row_frame, text=repo_name_only,
+                font=ctk.CTkFont(family="Open Sans", size=13, weight="bold"),
+                anchor="w"
+            )
+            name_lbl.grid(row=0, column=1, sticky="w", padx=(10, 0))
+            ToolTip(name_lbl, repo_name_full)
+
+            # C2: Namespace/Group (Small/Gray)
+            ns_lbl = ctk.CTkLabel(
+                row_frame, text=middle_truncate(namespace, 30),
+                font=ctk.CTkFont(family="Open Sans", size=11),
+                text_color="gray", anchor="w"
+            )
+            ns_lbl.grid(row=0, column=2, sticky="w", padx=(10, 0))
+            ToolTip(ns_lbl, namespace)
+
+            # C3: Status Icon
+            status_icon = self.icon_cloud_done_img if is_local else self.icon_cloud_img
+            status_lbl = ctk.CTkLabel(row_frame, text="", image=status_icon)
+            status_lbl.grid(row=0, column=3)
+            ToolTip(status_lbl, "Local (Already Cloned)" if is_local else "Remote (Cloud)")
+
+            # C4: Last Activity
+            activity_text = format_gitlab_date(last_activity)
+            activity_lbl = ctk.CTkLabel(
+                row_frame, text=activity_text,
+                font=ctk.CTkFont(family="Open Sans", size=11),
+                text_color="gray"
+            )
+            activity_lbl.grid(row=0, column=4, sticky="w")
+
+            # C5: Quick Actions
+            actions_frame = ctk.CTkFrame(row_frame, fg_color="transparent")
+            actions_frame.grid(row=0, column=5)
+
+            # Web Button
+            web_btn = ctk.CTkButton(
+                actions_frame, text="", image=self.icon_world_img, width=28, height=28,
+                fg_color="transparent", hover_color="gray40",
+                command=lambda url=web_url: os.startfile(url) if sys.platform == "win32" else subprocess.Popen(["open" if sys.platform=="darwin" else "xdg-open", url])
+            )
+            web_btn.pack(side="left", padx=2)
+            ToolTip(web_btn, _("tooltip_open_web"))
+
+            # Copy Button (Menu for HTTPS/SSH)
+            copy_btn = ctk.CTkButton(
+                actions_frame, text="", image=self.icon_copy_img, width=28, height=28,
+                fg_color="transparent", hover_color="gray40"
+            )
+            copy_btn.pack(side="left", padx=2)
+            
+            def show_copy_menu(btn=copy_btn, h=http_url, s=ssh_url):
+                menu = tk.Menu(btn, tearoff=0)
+                menu.add_command(label="Copy HTTPS", command=lambda: self.copy_to_clip(h))
+                if s:
+                    menu.add_command(label="Copy SSH", command=lambda: self.copy_to_clip(s))
+                menu.tk_popup(btn.winfo_rootx(), btn.winfo_rooty() + btn.winfo_height())
+
+            copy_btn.configure(command=show_copy_menu)
+            ToolTip(copy_btn, _("tooltip_copy_path")) # Reusing key or should use a more generic one
 
             self.repo_items.append({
-                "name": repo_name, "widget": cb,
+                "name": repo_name_full, "widget": row_frame,
                 "var": var, "url": http_url, "id": project_id
             })
 
@@ -1480,7 +1584,6 @@ class GLRCApp(ctk.CTk):
         self.update_pagination_controls(has_next=has_next)
         self.connect_btn.configure(state="normal", text=_("connect_btn"))
         self.update_selection_action_buttons()
-        
         self.set_ui_loading_state(False)
         
         # Determine if pagination should be hidden (when searching)
@@ -1491,6 +1594,11 @@ class GLRCApp(ctk.CTk):
             self.update_repo_range_label(len(projects))
         else:
             self.per_page_combo.configure(state="normal")
+
+    def copy_to_clip(self, text):
+        self.clipboard_clear()
+        self.clipboard_append(text)
+        show_custom_message(self, _("done_title"), _("path_copied"), icon_type="success")
 
     def apply_window_icon(self, window):
         try:

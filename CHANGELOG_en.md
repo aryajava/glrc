@@ -4,6 +4,46 @@ All algorithmic modifications, architectural restructurings, bugfixes, and featu
 
 ======================
 
+## version 1.5.6
+
+*Dashboard Style & Multi-Column Table* — Total overhaul of the repository list into an informative table and updated visual status indicators.
+
+### enhancement:
+- **Multi-Column Table Layout:** Transformed the repository list into a 6-column table:
+  1. **Checkbox:** For bulk selection.
+  2. **Project Name:** Project name with bold and large font.
+  3. **Namespace/Group:** Group path with small font and gray color.
+  4. **Status:** Visual Cloud vs Local indicators using new Material Icons.
+  5. **Last Activity:** Displays the last commit date from GitLab.
+  6. **Quick Actions:** Fast access to open the repo in a browser or copy clone links (HTTPS/SSH).
+- **New Material Status Icons:**
+  - `cloud_download` (e2c0) for repositories that are already local.
+  - `cloud` (e2bd) for repositories that have not yet been cloned.
+- **Quick Action Tooltips:** Added informative tooltips for every quick action in the repository row.
+- **Date Formatting:** Integrated a helper to format GitLab timestamps into a human-readable format (DD MMM YYYY).
+
+======================
+
+## version 1.5.6
+
+*Dashboard Style & Multi-Column Table* — Total overhaul of the repository list into an informative table and updated visual status indicators.
+
+### enhancement:
+- **Multi-Column Table Layout:** Transformed the repository list into a 6-column table:
+  1. **Checkbox:** For bulk selection.
+  2. **Project Name:** Project name with bold and large font.
+  3. **Namespace/Group:** Group path with small font and gray color.
+  4. **Status:** Visual Cloud vs Local indicators using new Material Icons.
+  5. **Last Activity:** Displays the last commit date from GitLab.
+  6. **Quick Actions:** Fast access to open the repo in a browser or copy clone links (HTTPS/SSH).
+- **New Material Status Icons:**
+  - `cloud_download` (e2c0) for repositories that are already local.
+  - `cloud` (e2bd) for repositories that have not yet been cloned.
+- **Quick Action Tooltips:** Added informative tooltips for every quick action in the repository row.
+- **Date Formatting:** Integrated a helper to format GitLab timestamps into a human-readable format (DD MMM YYYY).
+
+======================
+
 ## version 1.5.5
 
 *UX Polish & Maintenance* — Modal layout improvements, internal search, local status indicators, and Git identity standardization.
