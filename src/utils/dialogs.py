@@ -3,6 +3,7 @@ Dialog functions untuk GLRC Application
 """
 import customtkinter as ctk
 from src.utils.helpers import center_window
+from src.utils.i18n import _
 
 # Global set untuk tracking active message dialogs (mencegah duplikasi)
 _active_messages = set()
@@ -40,7 +41,16 @@ def _activate_dialog(dialog):
     def clear_topmost():
         try:
             if dialog.winfo_exists():
-                dialog.attributes("-topmost", False)
+                # Keep topmost if main app has always_on_top enabled
+                app = _resolve_app_window(dialog)
+                keep_top = False
+                if hasattr(app, "config"):
+                    try:
+                        keep_top = app.config.get_window_state().get("always_on_top", False)
+                    except Exception:
+                        pass
+                if not keep_top:
+                    dialog.attributes("-topmost", False)
         except Exception:
             pass
 
@@ -50,39 +60,32 @@ def _activate_dialog(dialog):
         dialog.update_idletasks()
         dialog.lift()
         dialog.attributes("-topmost", True)
-        dialog.after(150, clear_topmost)
+        dialog.after(250, clear_topmost)
         dialog.focus_force()
     except Exception:
         pass
 
+
 def show_custom_message(parent, title, message, icon_type="info", is_confirmation=False):
-    """
-    Menampilkan custom message dialog.
-
-    Args:
-        parent: Parent window
-        title: Dialog title
-        message: Dialog message
-        icon_type: Type of icon ("info", "warning", "error", "success")
-        is_confirmation: Boolean, True jika dialog konfirmasi dengan tombol Cancel/OK
-
-    Returns:
-        True jika OK, False jika Cancel (untuk confirmation), True untuk message biasa
-    """
-    msg_key = (title, message)
+    """Base function untuk menampilkan message box kustom dengan tema."""
+    msg_key = f"{title}_{message}"
     if msg_key in _active_messages:
         return None
     _active_messages.add(msg_key)
 
     dialog = ctk.CTkToplevel(parent)
-    dialog.withdraw()  # Hide while configuring
     dialog.title(title)
-    dialog.geometry("400x250")
+    dialog.withdraw() # Sembunyikan dulu sampai siap
+
+    width, height = 400, 240
+    center_window(dialog, width, height)
     dialog.resizable(False, False)
 
-    center_window(dialog, 400, 250)
-    dialog.transient(parent)
-    _apply_dialog_icon(dialog, parent)
+    # Styling colors
+    is_dark = ctk.get_appearance_mode() == "Dark"
+    bg_color = "#1e1e1e" if is_dark else "#f0f0f0"
+    text_color = "white" if is_dark else "black"
+    muted_text = "gray70" if is_dark else "gray30"
 
     frame = ctk.CTkFrame(dialog, fg_color="transparent")
     frame.pack(fill="both", expand=True, padx=20, pady=(20, 10))
@@ -103,7 +106,7 @@ def show_custom_message(parent, title, message, icon_type="info", is_confirmatio
         color = "#3498db"
         icon_str = "ℹ"
 
-    # Top-center Icon (Filled circle approximation via rounded frame + label)
+    # Top-center Icon
     icon_frame = ctk.CTkFrame(frame, width=50, height=50, corner_radius=25, fg_color=color)
     icon_frame.pack(pady=(0, 15))
     icon_frame.pack_propagate(False)
@@ -111,7 +114,7 @@ def show_custom_message(parent, title, message, icon_type="info", is_confirmatio
                  font=ctk.CTkFont(size=24, weight="bold")).pack(expand=True)
 
     msg_lbl = ctk.CTkLabel(frame, text=message, font=ctk.CTkFont(size=13),
-                          justify="center", wraplength=340)
+                          justify="center", wraplength=340, text_color=muted_text)
     msg_lbl.pack(fill="x", expand=True)
 
     result = [None]
@@ -131,24 +134,23 @@ def show_custom_message(parent, title, message, icon_type="info", is_confirmatio
             dialog.destroy()
 
     dialog.protocol("WM_DELETE_WINDOW", lambda: on_close(False))
-    dialog.bind("<Escape>", lambda event: on_close(False if is_confirmation else True))
+    dialog.bind("<Escape>", lambda event: (on_close(False if is_confirmation else True), "break")[1])
     dialog.bind("<Destroy>", lambda event: release_dialog_grab(), add="+")
 
     btn_frame = ctk.CTkFrame(dialog, fg_color="transparent")
     btn_frame.pack(pady=(0, 20))
 
     if is_confirmation:
-        ctk.CTkButton(btn_frame, text="Batal", width=100, fg_color="gray40",
+        ctk.CTkButton(btn_frame, text=_("cancel"), width=100, fg_color="gray40",
                      hover_color="gray30", command=lambda: on_close(False)).pack(side="left", padx=10)
-        ctk.CTkButton(btn_frame, text="OK", width=100,
+        ctk.CTkButton(btn_frame, text=_("ok"), width=100,
                      command=lambda: on_close(True)).pack(side="left", padx=10)
     else:
-        ctk.CTkButton(btn_frame, text="OK", width=120,
+        ctk.CTkButton(btn_frame, text=_("ok"), width=120,
                      command=lambda: on_close(True)).pack()
 
     dialog.deiconify()
     _activate_dialog(dialog)
-    # Single backup for CTkToplevel internal callbacks (~150ms)
     dialog.after(200, lambda d=dialog: d.winfo_exists() and _apply_dialog_icon(d, parent))
     dialog.grab_set()
     dialog.wait_window()

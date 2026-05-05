@@ -41,7 +41,25 @@ class ConfigManager:
             "pat_expiry": None,
             "language": self.default_bundled_lang,
             "theme": "System",
-            "clone_method": "HTTPS"
+            "clone_method": "HTTPS",
+            "recent_workspaces": [],
+            "recent_limit": 10,
+            "window_state": {
+                "width": None,
+                "height": None,
+                "x": None,
+                "y": None,
+                "always_on_top": False,
+                "opacity": 100,
+                "minimize_to_tray": False,
+                "startup_state": "Center",
+                "modal_dimming": True,
+                "keyboard_shortcuts": {
+                    "workspace_tools": "Control-g",
+                    "find": "Control-f",
+                    "primary_action": "Control-Return"
+                }
+            }
         }
         
         # Buat direktori jika belum ada
@@ -175,6 +193,127 @@ class ConfigManager:
 
     def get_clone_method(self) -> str:
         return self.config_data.get("clone_method", "HTTPS")
+
+    # --- Recent Workspaces ---
+
+    def get_recent_limit(self) -> int:
+        try:
+            limit = int(self.config_data.get("recent_limit", 10))
+        except (TypeError, ValueError):
+            limit = 10
+        return limit if limit in (5, 10, 20) else 10
+
+    def set_recent_limit(self, limit: int):
+        try:
+            limit = int(limit)
+        except (TypeError, ValueError):
+            limit = 10
+        if limit not in (5, 10, 20):
+            limit = 10
+        self.config_data["recent_limit"] = limit
+        self.config_data["recent_workspaces"] = self.get_recent_workspaces(prune_missing=True)[:limit]
+        self.save_config()
+
+    def add_recent_workspace(self, path: str):
+        if not path:
+            return
+        try:
+            workspace_path = str(Path(path).expanduser().resolve())
+        except Exception:
+            workspace_path = os.path.abspath(os.path.expanduser(path))
+
+        if not workspace_path.lower().endswith(".json"):
+            return
+
+        recent = self.get_recent_workspaces(prune_missing=True)
+        recent = [item for item in recent if os.path.normcase(item) != os.path.normcase(workspace_path)]
+        recent.insert(0, workspace_path)
+        self.config_data["recent_workspaces"] = recent[:self.get_recent_limit()]
+        self.save_config()
+
+    def get_recent_workspaces(self, prune_missing: bool = True) -> list:
+        raw_recent = self.config_data.get("recent_workspaces", [])
+        if not isinstance(raw_recent, list):
+            raw_recent = []
+
+        recent = []
+        seen = set()
+        for item in raw_recent:
+            if not isinstance(item, str) or not item.strip():
+                continue
+            try:
+                workspace_path = str(Path(item).expanduser().resolve())
+            except Exception:
+                workspace_path = os.path.abspath(os.path.expanduser(item))
+            norm_path = os.path.normcase(workspace_path)
+            if norm_path in seen:
+                continue
+            if prune_missing and not os.path.isfile(workspace_path):
+                continue
+            if not workspace_path.lower().endswith(".json"):
+                continue
+            seen.add(norm_path)
+            recent.append(workspace_path)
+
+        recent = recent[:self.get_recent_limit()]
+        if recent != raw_recent:
+            self.config_data["recent_workspaces"] = recent
+            self.save_config()
+        return recent
+
+    def clear_recent_workspaces(self):
+        self.config_data["recent_workspaces"] = []
+        self.save_config()
+
+    # --- Window State & Power UI ---
+
+    def get_window_state(self) -> dict:
+        defaults = {
+            "width": None,
+            "height": None,
+            "x": None,
+            "y": None,
+            "always_on_top": False,
+            "opacity": 100,
+            "minimize_to_tray": False,
+            "startup_state": "Center",
+            "modal_dimming": True,
+            "lock_window_pos": False,
+            "lock_modal_pos": False,
+            "keyboard_shortcuts": {
+                "workspace_tools": "Control-g",
+                "find": "Control-f",
+                "primary_action": "Control-Return"
+            }
+        }
+        state = self.config_data.get("window_state", {})
+        if not isinstance(state, dict):
+            state = {}
+        merged = defaults.copy()
+        merged.update({k: v for k, v in state.items() if k != "keyboard_shortcuts"})
+        shortcuts = defaults["keyboard_shortcuts"].copy()
+        if isinstance(state.get("keyboard_shortcuts"), dict):
+            shortcuts.update(state["keyboard_shortcuts"])
+        merged["keyboard_shortcuts"] = shortcuts
+        return merged
+
+    def set_window_state(self, updates: dict):
+        state = self.get_window_state()
+        for key, value in updates.items():
+            if key == "keyboard_shortcuts" and isinstance(value, dict):
+                shortcuts = state.get("keyboard_shortcuts", {}).copy()
+                shortcuts.update(value)
+                state["keyboard_shortcuts"] = shortcuts
+            else:
+                state[key] = value
+        self.config_data["window_state"] = state
+        self.save_config()
+
+    def get_keyboard_shortcuts(self) -> dict:
+        return self.get_window_state().get("keyboard_shortcuts", {})
+
+    def set_keyboard_shortcuts(self, shortcuts: dict):
+        self.set_window_state({"keyboard_shortcuts": shortcuts})
 
     # --- Pengelolaan PAT via Keyring ---
 

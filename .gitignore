@@ -33,4 +33,7 @@ default_lang.txt
 Thumbs.db
 
 # Documentation artifacts
-version_roadmap.md
+docs/
+
+# Scratch and Temporary files
+scratch/

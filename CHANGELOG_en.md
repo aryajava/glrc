@@ -4,6 +4,51 @@ All algorithmic modifications, architectural restructurings, bugfixes, and featu
 
 ======================
 
+## version 1.5.3
+
+*Stability & Full Localization* — Final patch for UI stability, data loss prevention via confirmation system, and a comprehensive localization (i18n) audit.
+
+### enhancement:
+- **Change Confirmation System:** Implemented "dirty checking" logic in Settings, Interface, and Keyboard Mapping modals. The app now detects unsaved changes and asks for confirmation before closing or saving.
+- **Full i18n Audit:** Performed a complete audit of the multi-language system. Added 20+ new keys and localized all remaining hardcoded strings (including git process logs, placeholders, and dialog labels).
+- **Quick Export Button:** Added an "Export" button directly to the main screen to speed up the workflow for exporting selected repositories to JSON.
+- **Improved Dialog Labels:** Synchronized "OK" and "Cancel" button labels across all dialogs to ensure consistency with the user's language preference.
+
+### bugfix:
+- **RecursionError Fix:** Resolved potential `maximum recursion depth exceeded` crashes by using safer UI callback scheduling via `.after()`.
+- **Warning Key Fix:** Fixed a bug where the "Select at least one repository" warning appeared as a raw key code (`at_least_one`) instead of localized text.
+
+======================
+
+## version 1.5.2
+
+*Power User & Advanced UI* — A patch for advanced window controls, project resolving, keyboard mapping, and system tray integration.
+
+### enhancement:
+- **Advanced Project Resolver:** The app scans repository-root markers such as `.sln`, `.csproj`, `package.json`, `requirements.txt`, `pyproject.toml`, `pom.xml`, and Gradle files so IDE launch targets are smarter.
+- **Window State Persistence:** Window size and position are saved on exit, with a screen safety guard to avoid restoring off-screen coordinates.
+- **Power User Controls:** Settings now includes controls for Always on Top, 80-100% opacity, minimize to tray, startup state, and modal background dimming.
+- **Custom Keyboard Mapping:** Settings now includes a Keyboard Mapping modal for Workspace Tools, Find, and primary action shortcuts.
+- **System Tray Integration:** The app can minimize to tray with Show and Exit menu actions when the `pystray` dependency is available.
+- **Settings Layout Fix:** The Settings modal is taller and scrollable so the Save button is no longer clipped.
+
+======================
+
+## version 1.5.1
+
+*UX & Navigation Core* — A patch that improves daily navigation with workspace history, keyboard navigation, smarter IDE integration, and clearer clone results.
+
+### enhancement:
+- **Recent Workspaces v1:** Exported, generated, and imported `.json` workspaces are remembered automatically, can be quick-loaded from Workspace Tools, cleared manually, and limited from Settings.
+- **Basic Smart IDE Integration:** VS Code, Cursor, Visual Studio, and File Explorer detection now checks registry entries, PATH, and common install paths; the Open button always shows a choice menu.
+- **System Theme Sync:** Light/Dark/System theme changes are applied immediately to the UI and custom components without restart.
+- **Basic Keyboard Shortcuts:** Added contextual `Ctrl+G`, `Ctrl+F`, `Ctrl+Enter`, and `Esc` behavior.
+- **Smart Tooltips:** Tooltips are smoother, theme-aware, dynamic, and cover Workspace Tools plus the Success Dialog actions.
+- **Enhanced Success Dialog:** Clone results now show absolute paths, one-click path copy, visual feedback, and integrated IDE/File Explorer selection.
+- **Empty State UI:** Empty repository lists now render helpful in-list guidance and CTAs instead of a not-found popup.
+
+======================
+
 ## version 1.5.0
 
 *Workspace Tools Maturation* — Feature update to mature the Workspace Tools utility with productivity enhancements.

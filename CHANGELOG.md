@@ -4,6 +4,51 @@ Semua modifikasi, *bugfix*, dan penambahan fitur inti pada aplikasi GLRC akan di
 
 ======================
 
+## version 1.5.3
+
+*Stability & Full Localization* — Patch final untuk stabilitas UI, pencegahan kehilangan data melalui sistem konfirmasi, dan audit lokalisasi (i18n) menyeluruh.
+
+### enhancement:
+- **Change Confirmation System:** Implementasi *dirty checking* pada modal Settings, Interface, dan Keyboard Mapping. Aplikasi kini mendeteksi perubahan dan meminta konfirmasi sebelum menutup atau menyimpan untuk mencegah kehilangan data.
+- **Full i18n Audit:** Melakukan audit menyeluruh terhadap sistem multibahasa. Menambahkan 20+ key baru dan melokalisasi seluruh string yang sebelumnya masih hardcode (termasuk log proses git, placeholder, dan label dialog).
+- **Quick Export Button:** Menambahkan tombol "Export" langsung di halaman utama untuk mempercepat alur kerja ekspor repositori terpilih ke JSON.
+- **Improved Dialog Labels:** Sinkronisasi label tombol "OK" dan "Batal" di seluruh sistem dialog agar konsisten dengan pilihan bahasa pengguna.
+
+### bugfix:
+- **RecursionError Fix:** Menghilangkan potensi crash `maximum recursion depth exceeded` melalui penjadwalan UI callback yang lebih aman menggunakan `.after()`.
+- **Warning Key Fix:** Memperbaiki bug di mana pesan peringatan "Pilih minimal satu repositori" tampil sebagai kode kunci (`at_least_one`) alih-alih teks terjemahan.
+
+======================
+
+## version 1.5.2
+
+*Power User & Advanced UI* — Patch untuk kontrol window lanjutan, resolver proyek, mapping keyboard, dan integrasi system tray.
+
+### enhancement:
+- **Advanced Project Resolver:** Aplikasi memindai marker proyek di root repo seperti `.sln`, `.csproj`, `package.json`, `requirements.txt`, `pyproject.toml`, `pom.xml`, dan Gradle files agar target pembukaan IDE lebih tepat.
+- **Window State Persistence:** Ukuran dan posisi window disimpan saat keluar, dengan guard agar posisi lama yang berada di luar layar tidak dipulihkan secara berbahaya.
+- **Power User Controls:** Settings kini menyediakan modal kontrol untuk Always on Top, opacity 80-100%, minimize to tray, startup state, dan modal background dimming.
+- **Custom Keyboard Mapping:** Settings kini menyediakan modal Keyboard Mapping untuk mengubah shortcut Workspace Tools, Find, dan aksi utama.
+- **System Tray Integration:** Aplikasi dapat minimize ke tray dengan menu Show dan Exit jika dependency `pystray` tersedia.
+- **Settings Layout Fix:** Modal Settings dibuat lebih tinggi dan scrollable sehingga tombol Save tidak lagi terpotong.
+
+======================
+
+## version 1.5.1
+
+*UX & Navigation Core* — Patch untuk mempercepat alur kerja harian melalui riwayat workspace, navigasi keyboard, integrasi IDE yang lebih pintar, dan tampilan hasil clone yang lebih jelas.
+
+### enhancement:
+- **Recent Workspaces v1:** Workspace `.json` yang diekspor, digenerate, atau diimpor otomatis masuk riwayat terbaru, bisa dimuat ulang dari Workspace Tools, dibersihkan manual, dan dibatasi dari Settings.
+- **Basic Smart IDE Integration:** Deteksi VS Code, Cursor, Visual Studio, dan File Explorer kini lebih cerdas melalui registry, PATH, dan lokasi instalasi umum; tombol Open selalu menampilkan menu pilihan.
+- **System Theme Sync:** Perubahan tema Light/Dark/System diterapkan langsung pada UI dan komponen kustom tanpa perlu restart.
+- **Basic Keyboard Shortcuts:** Menambahkan `Ctrl+G`, `Ctrl+F`, `Ctrl+Enter`, dan `Esc` sesuai konteks modal.
+- **Smart Tooltips:** Tooltip kini lebih halus, mengikuti tema, mendukung teks dinamis, dan mencakup tombol Workspace Tools serta Success Dialog.
+- **Enhanced Success Dialog:** Dialog hasil clone menampilkan path absolut, tombol salin path, feedback visual, dan menu IDE/File Explorer terintegrasi.
+- **Empty State UI:** Daftar repositori kosong kini menampilkan panduan visual dan CTA, bukan popup not found.
+
+======================
+
 ## version 1.5.0
 
 *Workspace Tools Maturation* — Pembaruan fitur untuk mematangkan utilitas Workspace Tools dengan berbagai fungsi produktivitas.

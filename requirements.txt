@@ -14,3 +14,4 @@ pyinstaller>=6.19.0
 keyring>=24.3.0
 keyrings.alt>=5.0.0
 openpyxl==3.1.2
+pystray>=0.19.5
