@@ -2747,8 +2747,16 @@ class GLRCApp(ctk.CTk):
                 if url in cached_by_url:
                     projects.append(cached_by_url[url])
                 else:
+                    path_with_ns = info.get("name", url.rstrip("/").split("/")[-1])
+                    if path_with_ns.endswith(".git"):
+                        path_with_ns = path_with_ns[:-4]
+                    parts = path_with_ns.split("/")
+                    name_only = parts[-1]
+                    ns_path = "/".join(parts[:-1]) if len(parts) > 1 else ""
                     projects.append({
-                        "path_with_namespace": info.get("name", url.rstrip("/").split("/")[-1]),
+                        "path_with_namespace": path_with_ns,
+                        "name": name_only,
+                        "namespace": {"full_path": ns_path},
                         "http_url_to_repo": url,
                         "id": info.get("id", 0),
                     })
