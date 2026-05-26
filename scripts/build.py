@@ -226,6 +226,7 @@ def build_one(repo_root: Path, lang: str, app_name: str) -> None:
         app_name,
         "--copy-metadata", "keyring",
         "--hidden-import", "keyrings.alt",
+        "--hidden-import", "PIL._tkinter_finder",
     ]
 
     icon_file = pick_icon_file(repo_root)
