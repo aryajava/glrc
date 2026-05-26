@@ -77,7 +77,7 @@ jobs:
           mkdir -p release-assets
           
           # Download appimagetool
-          wget -q https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage -O appimagetool
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
           chmod +x appimagetool
           
           # Package English version as AppImage
