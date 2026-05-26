@@ -75,9 +75,18 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           mkdir -p release-assets
-          cp dist/glrc-en "release-assets/glrc-en-macos"
-          cp dist/glrc-id "release-assets/glrc-id-macos"
-          chmod +x "release-assets/glrc-en-macos" "release-assets/glrc-id-macos"
+          
+          # Package English version as DMG
+          mkdir -p dmg-temp-en
+          cp -R dist/glrc-en.app dmg-temp-en/
+          ln -s /Applications dmg-temp-en/Applications
+          hdiutil create -fs HFS+ -volname "GLRC English" -srcfolder dmg-temp-en release-assets/glrc-en-macos.dmg
+          
+          # Package Indonesian version as DMG
+          mkdir -p dmg-temp-id
+          cp -R dist/glrc-id.app dmg-temp-id/
+          ln -s /Applications dmg-temp-id/Applications
+          hdiutil create -fs HFS+ -volname "GLRC Indonesian" -srcfolder dmg-temp-id release-assets/glrc-id-macos.dmg
 
       - name: Upload release artifacts
         uses: actions/upload-artifact@v4
@@ -139,7 +148,7 @@ jobs:
           echo "=== Release assets ==="
           ls -la release-assets/
           echo "=== Checking expected files ==="
-          for f in glrc-en-windows.exe glrc-id-windows.exe glrc-en-linux glrc-id-linux glrc-en-macos glrc-id-macos; do
+          for f in glrc-en-windows.exe glrc-id-windows.exe glrc-en-linux glrc-id-linux glrc-en-macos.dmg glrc-id-macos.dmg; do
             if [ -f "release-assets/$f" ]; then
               echo "✓ $f ($(stat -c%s "release-assets/$f") bytes)"
             else
@@ -187,5 +196,5 @@ jobs:
             release-assets/glrc-id-windows.exe
             release-assets/glrc-en-linux
             release-assets/glrc-id-linux
-            release-assets/glrc-en-macos
-            release-assets/glrc-id-macos
+            release-assets/glrc-en-macos.dmg
+            release-assets/glrc-id-macos.dmg
