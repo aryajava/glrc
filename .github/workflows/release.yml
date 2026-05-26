@@ -45,7 +45,8 @@ jobs:
             libfreetype6-dev \
             libjpeg-dev \
             zlib1g-dev \
-            tk-dev
+            tk-dev \
+            xvfb
 
       - name: Install dependencies
         run: |
@@ -53,7 +54,13 @@ jobs:
           pip install --prefer-binary -r requirements.txt
 
       - name: Build EN and ID binaries
-        run: python scripts/build.py --lang all
+        run: |
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            export DISPLAY=:99
+            sudo Xvfb :99 -screen 0 1024x768x24 > /dev/null 2>&1 &
+            sleep 2
+          fi
+          python scripts/build.py --lang all
 
       - name: Prepare Windows release assets
         if: runner.os == 'Windows'
