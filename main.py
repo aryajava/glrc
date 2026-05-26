@@ -514,23 +514,26 @@ class GLRCApp(ctk.CTk):
         modal.bind("<Escape>", lambda event: (close_action(), "break")[1])
         modal.bind("<Destroy>", cleanup_on_destroy, add="+")
 
-        # If main window is always-on-top, modal must also be topmost
-        # This MUST be set before grab_set to ensure modal appears above main window
+        def _activate_modal():
+            try:
+                if self.config.get_window_state().get("always_on_top"):
+                    modal.attributes("-topmost", True)
+                modal.lift()
+                modal.focus_force()
+                if use_grab:
+                    modal.grab_set()
+            except Exception:
+                pass
+
         try:
-            if self.config.get_window_state().get("always_on_top"):
-                modal.attributes("-topmost", True)
+            modal.deiconify()
         except Exception:
             pass
 
-        # Activate window normally (deiconify, lift, topmost)
-        try:
-            modal.deiconify()
-            modal.lift()
-            modal.focus_force()
-            if use_grab:
-                modal.grab_set()
-        except Exception:
-            pass
+        if sys.platform.startswith("linux"):
+            modal.after(150, _activate_modal)
+        else:
+            _activate_modal()
 
         # Lock modal position (via Windows API – no flicker)
         if self.config.get_window_state().get("lock_modal_pos"):
@@ -3275,6 +3278,13 @@ class GLRCApp(ctk.CTk):
 
         # Environment tanpa credential helper — mencegah token tersimpan di Windows Credential Store
         git_env = os.environ.copy()
+        
+        # [Fix for PyInstaller Linux] Restore original LD_LIBRARY_PATH to avoid SSL version conflicts
+        if "LD_LIBRARY_PATH_ORIG" in git_env:
+            git_env["LD_LIBRARY_PATH"] = git_env["LD_LIBRARY_PATH_ORIG"]
+        elif "LD_LIBRARY_PATH" in git_env and getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+            del git_env["LD_LIBRARY_PATH"]
+
         git_env["GIT_TERMINAL_PROMPT"] = "0"
         git_env["GIT_ASKPASS"] = ""
 
