@@ -86,20 +86,20 @@ jobs:
           cp dist/glrc-en AppDir-en/usr/bin/
           cp assets/icons/logo.png AppDir-en/usr/share/icons/hicolor/256x256/apps/glrc-en.png
           cp assets/icons/logo.png AppDir-en/glrc-en.png
-          cat <<EOF > AppDir-en/glrc-en.desktop
-          [Desktop Entry]
-          Type=Application
-          Name=GLRC English
-          Exec=glrc-en
-          Icon=glrc-en
-          Categories=Utility;
-          EOF
+          cat <<'EOF' > AppDir-en/glrc-en.desktop
+[Desktop Entry]
+Type=Application
+Name=GLRC English
+Exec=glrc-en
+Icon=glrc-en
+Categories=Utility;
+EOF
           ln -s ../../../glrc-en.desktop AppDir-en/usr/share/applications/glrc-en.desktop
           cat <<'EOF' > AppDir-en/AppRun
-          #!/bin/sh
-          HERE="$(dirname "$(readlink -f "${0}")")"
-          exec "${HERE}/usr/bin/glrc-en" "$@"
-          EOF
+#!/bin/sh
+HERE="$(dirname "$(readlink -f "${0}")")"
+exec "${HERE}/usr/bin/glrc-en" "$@"
+EOF
           chmod +x AppDir-en/AppRun
           ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir-en release-assets/glrc-en-linux.AppImage
           
@@ -110,20 +110,20 @@ jobs:
           cp dist/glrc-id AppDir-id/usr/bin/
           cp assets/icons/logo.png AppDir-id/usr/share/icons/hicolor/256x256/apps/glrc-id.png
           cp assets/icons/logo.png AppDir-id/glrc-id.png
-          cat <<EOF > AppDir-id/glrc-id.desktop
-          [Desktop Entry]
-          Type=Application
-          Name=GLRC Indonesian
-          Exec=glrc-id
-          Icon=glrc-id
-          Categories=Utility;
-          EOF
+          cat <<'EOF' > AppDir-id/glrc-id.desktop
+[Desktop Entry]
+Type=Application
+Name=GLRC Indonesian
+Exec=glrc-id
+Icon=glrc-id
+Categories=Utility;
+EOF
           ln -s ../../../glrc-id.desktop AppDir-id/usr/share/applications/glrc-id.desktop
           cat <<'EOF' > AppDir-id/AppRun
-          #!/bin/sh
-          HERE="$(dirname "$(readlink -f "${0}")")"
-          exec "${HERE}/usr/bin/glrc-id" "$@"
-          EOF
+#!/bin/sh
+HERE="$(dirname "$(readlink -f "${0}")")"
+exec "${HERE}/usr/bin/glrc-id" "$@"
+EOF
           chmod +x AppDir-id/AppRun
           ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir-id release-assets/glrc-id-linux.AppImage
 
