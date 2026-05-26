@@ -67,9 +67,58 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           mkdir -p release-assets
-          cp dist/glrc-en "release-assets/glrc-en-linux"
-          cp dist/glrc-id "release-assets/glrc-id-linux"
-          chmod +x "release-assets/glrc-en-linux" "release-assets/glrc-id-linux"
+          
+          # Download appimagetool
+          wget -q https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-x86_64.AppImage -O appimagetool
+          chmod +x appimagetool
+          
+          # Package English version as AppImage
+          mkdir -p AppDir-en/usr/bin
+          mkdir -p AppDir-en/usr/share/applications
+          mkdir -p AppDir-en/usr/share/icons/hicolor/256x256/apps
+          cp dist/glrc-en AppDir-en/usr/bin/
+          cp assets/icons/logo.png AppDir-en/usr/share/icons/hicolor/256x256/apps/glrc-en.png
+          cp assets/icons/logo.png AppDir-en/glrc-en.png
+          cat <<EOF > AppDir-en/glrc-en.desktop
+          [Desktop Entry]
+          Type=Application
+          Name=GLRC English
+          Exec=glrc-en
+          Icon=glrc-en
+          Categories=Utility;
+          EOF
+          ln -s ../../../glrc-en.desktop AppDir-en/usr/share/applications/glrc-en.desktop
+          cat <<'EOF' > AppDir-en/AppRun
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "${0}")")"
+          exec "${HERE}/usr/bin/glrc-en" "$@"
+          EOF
+          chmod +x AppDir-en/AppRun
+          ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir-en release-assets/glrc-en-linux.AppImage
+          
+          # Package Indonesian version as AppImage
+          mkdir -p AppDir-id/usr/bin
+          mkdir -p AppDir-id/usr/share/applications
+          mkdir -p AppDir-id/usr/share/icons/hicolor/256x256/apps
+          cp dist/glrc-id AppDir-id/usr/bin/
+          cp assets/icons/logo.png AppDir-id/usr/share/icons/hicolor/256x256/apps/glrc-id.png
+          cp assets/icons/logo.png AppDir-id/glrc-id.png
+          cat <<EOF > AppDir-id/glrc-id.desktop
+          [Desktop Entry]
+          Type=Application
+          Name=GLRC Indonesian
+          Exec=glrc-id
+          Icon=glrc-id
+          Categories=Utility;
+          EOF
+          ln -s ../../../glrc-id.desktop AppDir-id/usr/share/applications/glrc-id.desktop
+          cat <<'EOF' > AppDir-id/AppRun
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "${0}")")"
+          exec "${HERE}/usr/bin/glrc-id" "$@"
+          EOF
+          chmod +x AppDir-id/AppRun
+          ARCH=x86_64 ./appimagetool --appimage-extract-and-run AppDir-id release-assets/glrc-id-linux.AppImage
 
       - name: Prepare macOS release assets
         if: runner.os == 'macOS'
@@ -148,7 +197,7 @@ jobs:
           echo "=== Release assets ==="
           ls -la release-assets/
           echo "=== Checking expected files ==="
-          for f in glrc-en-windows.exe glrc-id-windows.exe glrc-en-linux glrc-id-linux glrc-en-macos.dmg glrc-id-macos.dmg; do
+          for f in glrc-en-windows.exe glrc-id-windows.exe glrc-en-linux.AppImage glrc-id-linux.AppImage glrc-en-macos.dmg glrc-id-macos.dmg; do
             if [ -f "release-assets/$f" ]; then
               echo "✓ $f ($(stat -c%s "release-assets/$f") bytes)"
             else
@@ -194,7 +243,7 @@ jobs:
           files: |
             release-assets/glrc-en-windows.exe
             release-assets/glrc-id-windows.exe
-            release-assets/glrc-en-linux
-            release-assets/glrc-id-linux
+            release-assets/glrc-en-linux.AppImage
+            release-assets/glrc-id-linux.AppImage
             release-assets/glrc-en-macos.dmg
             release-assets/glrc-id-macos.dmg
