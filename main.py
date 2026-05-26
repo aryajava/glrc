@@ -40,6 +40,86 @@ from src.constants import (
 )
 from src.utils.helpers import center_window, ToolTip, middle_truncate, get_last_path_segment, format_gitlab_date
 
+# --- Native Linux Helpers Patch ---
+def _clean_env():
+    env = os.environ.copy()
+    if "LD_LIBRARY_PATH_ORIG" in env:
+        env["LD_LIBRARY_PATH"] = env["LD_LIBRARY_PATH_ORIG"]
+    elif "LD_LIBRARY_PATH" in env and getattr(sys, 'frozen', False) and hasattr(sys, '_MEIPASS'):
+        del env["LD_LIBRARY_PATH"]
+    return env
+
+def patch_linux_scrolling(root):
+    if not sys.platform.startswith("linux"): return
+    def _on_mousewheel(event):
+        widget = root.winfo_containing(event.x_root, event.y_root)
+        if not widget: return
+        parent = widget
+        while parent:
+            if isinstance(parent, tk.Canvas) and hasattr(parent, 'yview_scroll'):
+                if event.num == 4: parent.yview_scroll(-1, "units")
+                elif event.num == 5: parent.yview_scroll(1, "units")
+                return
+            parent = parent.master
+    root.bind_all("<Button-4>", _on_mousewheel, add="+")
+    root.bind_all("<Button-5>", _on_mousewheel, add="+")
+
+_orig_askdirectory = filedialog.askdirectory
+def native_askdirectory(**kwargs):
+    if sys.platform.startswith("linux"):
+        if shutil.which("zenity"):
+            cmd = ["zenity", "--file-selection", "--directory"]
+            if "title" in kwargs: cmd.extend(["--title", kwargs["title"]])
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, env=_clean_env())
+                if res.returncode == 0: return res.stdout.strip()
+                return ""
+            except Exception: pass
+    return _orig_askdirectory(**kwargs)
+
+_orig_askopenfilename = filedialog.askopenfilename
+def native_askopenfilename(**kwargs):
+    if sys.platform.startswith("linux"):
+        if shutil.which("zenity"):
+            cmd = ["zenity", "--file-selection"]
+            if "title" in kwargs: cmd.extend(["--title", kwargs["title"]])
+            if "filetypes" in kwargs:
+                for label, ext in kwargs["filetypes"]:
+                    if ext and ext != "*.*":
+                        cmd.extend(["--file-filter", f"{label} | {ext}"])
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, env=_clean_env())
+                if res.returncode == 0: return res.stdout.strip()
+                return ""
+            except Exception: pass
+    return _orig_askopenfilename(**kwargs)
+
+_orig_asksaveasfilename = filedialog.asksaveasfilename
+def native_asksaveasfilename(**kwargs):
+    if sys.platform.startswith("linux"):
+        if shutil.which("zenity"):
+            cmd = ["zenity", "--file-selection", "--save", "--confirm-overwrite"]
+            if "title" in kwargs: cmd.extend(["--title", kwargs["title"]])
+            if "filetypes" in kwargs:
+                for label, ext in kwargs["filetypes"]:
+                    if ext and ext != "*.*":
+                        cmd.extend(["--file-filter", f"{label} | {ext}"])
+            try:
+                res = subprocess.run(cmd, capture_output=True, text=True, env=_clean_env())
+                if res.returncode == 0:
+                    path = res.stdout.strip()
+                    ext = kwargs.get("defaultextension", "")
+                    if ext and not path.endswith(ext): path += ext
+                    return path
+                return ""
+            except Exception: pass
+    return _orig_asksaveasfilename(**kwargs)
+
+filedialog.askdirectory = native_askdirectory
+filedialog.askopenfilename = native_askopenfilename
+filedialog.asksaveasfilename = native_asksaveasfilename
+# --------------------------------
+
 
 class Dimmer:
     """Subtle overlay behind modal windows when enabled."""
@@ -105,6 +185,8 @@ class GLRCApp(ctk.CTk):
 
     def __init__(self):
         super().__init__()
+        
+        patch_linux_scrolling(self)
 
         # Resolve bundled asset path (PyInstaller onefile extracts to _MEIPASS).
         self.base_dir = getattr(sys, "_MEIPASS", os.path.dirname(__file__))
