@@ -3801,7 +3801,8 @@ class GLRCApp(ctk.CTk):
                 normalized_key_path = ssh_key_path.replace("\\", "/")
                 configs.append(("core.sshCommand", f"ssh -i '{normalized_key_path}' -o IdentitiesOnly=yes"))
                 configs.append(("gpg.format", "ssh"))
-                configs.append(("user.signingkey", normalized_key_path))
+                configs.append(("user.signingkey", normalized_key_path + ".pub"))
+                configs.append(("commit.gpgsign", "true"))
 
 
         if not configs:
