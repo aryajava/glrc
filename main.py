@@ -3800,13 +3800,20 @@ class GLRCApp(ctk.CTk):
             if ssh_key_path and os.path.exists(ssh_key_path):
                 normalized_key_path = ssh_key_path.replace("\\", "/")
                 
+                # Convert absolute path to ~ if it's in the user's home directory
+                home_dir = os.path.expanduser("~").replace("\\", "/")
+                if normalized_key_path.startswith(home_dir):
+                    display_key_path = "~" + normalized_key_path[len(home_dir):]
+                else:
+                    display_key_path = normalized_key_path
+                
                 # Hanya set sshCommand jika transportnya SSH
                 if clone_method == "SSH":
-                    configs.append(("core.sshCommand", f"ssh -i '{normalized_key_path}' -o IdentitiesOnly=yes"))
+                    configs.append(("core.sshCommand", f"ssh -i '{display_key_path}' -o IdentitiesOnly=yes"))
                 
                 # GPG Signing via SSH (selalu set jika SSH key enabled, terlepas dari transport)
                 configs.append(("gpg.format", "ssh"))
-                configs.append(("user.signingkey", normalized_key_path + ".pub"))
+                configs.append(("user.signingkey", display_key_path + ".pub"))
                 configs.append(("commit.gpgsign", "true"))
 
 
