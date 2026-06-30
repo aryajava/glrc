@@ -374,3 +374,21 @@ class ConfigManager:
             
         self.config_data["pat_expiry"] = None
         self.save_config()
+
+    def get_ssh_enabled(self) -> bool:
+        return self.config_data.get("ssh_settings", {}).get("enabled", False)
+
+    def set_ssh_enabled(self, enabled: bool):
+        if "ssh_settings" not in self.config_data:
+            self.config_data["ssh_settings"] = {}
+        self.config_data["ssh_settings"]["enabled"] = enabled
+        self.save_config()
+
+    def get_ssh_key_path(self) -> str:
+        return self.config_data.get("ssh_settings", {}).get("key_path", "")
+
+    def set_ssh_key_path(self, key_path: str):
+        if "ssh_settings" not in self.config_data:
+            self.config_data["ssh_settings"] = {}
+        self.config_data["ssh_settings"]["key_path"] = key_path
+        self.save_config()

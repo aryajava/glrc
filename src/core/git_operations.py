@@ -19,7 +19,8 @@ class GitOperations:
         branch_name: str,
         api_token: str,
         clone_method: str = "HTTPS",
-        log_callback=None
+        log_callback=None,
+        ssh_key_path: str = None
     ) -> bool:
         """
         Clone repository dari GitLab.
@@ -31,6 +32,7 @@ class GitOperations:
             api_token: Personal Access Token
             clone_method: Method cloning ("HTTPS" atau "SSH")
             log_callback: Function untuk logging output
+            ssh_key_path: Path ke custom SSH key
 
         Returns:
             Boolean indicating success
@@ -59,6 +61,12 @@ class GitOperations:
         if os.name == 'nt' or sys.platform == 'win32':
             creationflags = 0x08000000  # CREATE_NO_WINDOW
 
+        env = os.environ.copy()
+        if clone_method == "SSH" and ssh_key_path and os.path.exists(ssh_key_path):
+            # Normalise path for git bash / Windows compat
+            normalized_key_path = ssh_key_path.replace("\\", "/")
+            env["GIT_SSH_COMMAND"] = f"ssh -i '{normalized_key_path}' -o IdentitiesOnly=yes"
+
         try:
             process = subprocess.Popen(
                 clone_command,
@@ -68,7 +76,8 @@ class GitOperations:
                 text=True,
                 bufsize=1,
                 universal_newlines=True,
-                creationflags=creationflags
+                creationflags=creationflags,
+                env=env
             )
 
             for line in process.stdout:
@@ -76,6 +85,16 @@ class GitOperations:
                     log_callback(f"    {line.strip()}")
 
             process.wait()
+            
+            # Set custom SSH key config in local repo
+            if process.returncode == 0 and clone_method == "SSH" and ssh_key_path and os.path.exists(ssh_key_path):
+                normalized_key_path = ssh_key_path.replace("\\", "/")
+                subprocess.run(
+                    ["git", "config", "core.sshCommand", f"ssh -i '{normalized_key_path}' -o IdentitiesOnly=yes"],
+                    cwd=repo_local_path,
+                    creationflags=creationflags
+                )
+
             return process.returncode == 0
 
         except Exception as e:
@@ -87,7 +106,8 @@ class GitOperations:
     def pull_repository(
         repo_local_path: str,
         branch_name: str,
-        log_callback=None
+        log_callback=None,
+        ssh_key_path: str = None
     ) -> bool:
         """
         Pull latest changes dari repository yang sudah ada.
@@ -96,6 +116,7 @@ class GitOperations:
             repo_local_path: Path ke repository lokal
             branch_name: Branch yang akan di-pull
             log_callback: Function untuk logging output
+            ssh_key_path: Path ke custom SSH key
 
         Returns:
             Boolean indicating success
@@ -104,6 +125,11 @@ class GitOperations:
         creationflags = 0
         if os.name == 'nt' or sys.platform == 'win32':
             creationflags = 0x08000000  # CREATE_NO_WINDOW
+
+        env = os.environ.copy()
+        if ssh_key_path and os.path.exists(ssh_key_path):
+            normalized_key_path = ssh_key_path.replace("\\", "/")
+            env["GIT_SSH_COMMAND"] = f"ssh -i '{normalized_key_path}' -o IdentitiesOnly=yes"
 
         try:
             process = subprocess.Popen(
@@ -114,7 +140,8 @@ class GitOperations:
                 text=True,
                 bufsize=1,
                 universal_newlines=True,
-                creationflags=creationflags
+                creationflags=creationflags,
+                env=env
             )
 
             for line in process.stdout:

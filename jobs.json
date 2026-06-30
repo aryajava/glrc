@@ -1,0 +1,430 @@
+{
+  "total_count": 4,
+  "jobs": [
+    {
+      "id": 77803242613,
+      "run_id": 26430709521,
+      "workflow_name": "Build and Release",
+      "head_branch": "v1.5.9",
+      "run_url": "https://api.github.com/repos/aryajava/glrc/actions/runs/26430709521",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORm6YM88AAAASHW9EdQ",
+      "head_sha": "51327a63b5c85e92e760efa5b27eb8059512e67c",
+      "url": "https://api.github.com/repos/aryajava/glrc/actions/jobs/77803242613",
+      "html_url": "https://github.com/aryajava/glrc/actions/runs/26430709521/job/77803242613",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-05-26T03:34:23Z",
+      "started_at": "2026-05-26T03:34:25Z",
+      "completed_at": "2026-05-26T03:34:57Z",
+      "name": "Build on windows-latest",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-05-26T03:34:26Z",
+          "completed_at": "2026-05-26T03:34:27Z"
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-05-26T03:34:27Z",
+          "completed_at": "2026-05-26T03:34:31Z"
+        },
+        {
+          "name": "Setup Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-05-26T03:34:31Z",
+          "completed_at": "2026-05-26T03:34:31Z"
+        },
+        {
+          "name": "Install Linux system dependencies",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 4,
+          "started_at": "2026-05-26T03:34:31Z",
+          "completed_at": "2026-05-26T03:34:31Z"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-05-26T03:34:31Z",
+          "completed_at": "2026-05-26T03:34:53Z"
+        },
+        {
+          "name": "Build EN and ID binaries",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 6,
+          "started_at": "2026-05-26T03:34:53Z",
+          "completed_at": "2026-05-26T03:34:53Z"
+        },
+        {
+          "name": "Prepare Windows release assets",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 7,
+          "started_at": "2026-05-26T03:34:53Z",
+          "completed_at": "2026-05-26T03:34:53Z"
+        },
+        {
+          "name": "Prepare Linux release assets",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 8,
+          "started_at": "2026-05-26T03:34:53Z",
+          "completed_at": "2026-05-26T03:34:53Z"
+        },
+        {
+          "name": "Prepare macOS release assets",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9,
+          "started_at": "2026-05-26T03:34:53Z",
+          "completed_at": "2026-05-26T03:34:53Z"
+        },
+        {
+          "name": "Upload release artifacts",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2026-05-26T03:34:53Z",
+          "completed_at": "2026-05-26T03:34:53Z"
+        },
+        {
+          "name": "Post Setup Python",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-05-26T03:34:53Z",
+          "completed_at": "2026-05-26T03:34:53Z"
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-05-26T03:34:53Z",
+          "completed_at": "2026-05-26T03:34:55Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-05-26T03:34:55Z",
+          "completed_at": "2026-05-26T03:34:55Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/aryajava/glrc/check-runs/77803242613",
+      "labels": [
+        "windows-latest"
+      ],
+      "runner_id": 1000000248,
+      "runner_name": "GitHub Actions 1000000248",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 77803242619,
+      "run_id": 26430709521,
+      "workflow_name": "Build and Release",
+      "head_branch": "v1.5.9",
+      "run_url": "https://api.github.com/repos/aryajava/glrc/actions/runs/26430709521",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORm6YM88AAAASHW9Eew",
+      "head_sha": "51327a63b5c85e92e760efa5b27eb8059512e67c",
+      "url": "https://api.github.com/repos/aryajava/glrc/actions/jobs/77803242619",
+      "html_url": "https://github.com/aryajava/glrc/actions/runs/26430709521/job/77803242619",
+      "status": "completed",
+      "conclusion": "failure",
+      "created_at": "2026-05-26T03:34:23Z",
+      "started_at": "2026-05-26T03:34:24Z",
+      "completed_at": "2026-05-26T03:36:12Z",
+      "name": "Build on ubuntu-latest",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-05-26T03:34:25Z",
+          "completed_at": "2026-05-26T03:34:26Z"
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-05-26T03:34:26Z",
+          "completed_at": "2026-05-26T03:34:26Z"
+        },
+        {
+          "name": "Setup Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-05-26T03:34:26Z",
+          "completed_at": "2026-05-26T03:34:27Z"
+        },
+        {
+          "name": "Install Linux system dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2026-05-26T03:34:27Z",
+          "completed_at": "2026-05-26T03:34:40Z"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-05-26T03:34:40Z",
+          "completed_at": "2026-05-26T03:34:56Z"
+        },
+        {
+          "name": "Build EN and ID binaries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-05-26T03:34:56Z",
+          "completed_at": "2026-05-26T03:36:10Z"
+        },
+        {
+          "name": "Prepare Windows release assets",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 7,
+          "started_at": "2026-05-26T03:36:10Z",
+          "completed_at": "2026-05-26T03:36:10Z"
+        },
+        {
+          "name": "Prepare Linux release assets",
+          "status": "completed",
+          "conclusion": "failure",
+          "number": 8,
+          "started_at": "2026-05-26T03:36:10Z",
+          "completed_at": "2026-05-26T03:36:10Z"
+        },
+        {
+          "name": "Prepare macOS release assets",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 9,
+          "started_at": "2026-05-26T03:36:10Z",
+          "completed_at": "2026-05-26T03:36:10Z"
+        },
+        {
+          "name": "Upload release artifacts",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 10,
+          "started_at": "2026-05-26T03:36:10Z",
+          "completed_at": "2026-05-26T03:36:10Z"
+        },
+        {
+          "name": "Post Setup Python",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 19,
+          "started_at": "2026-05-26T03:36:10Z",
+          "completed_at": "2026-05-26T03:36:10Z"
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-05-26T03:36:10Z",
+          "completed_at": "2026-05-26T03:36:11Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-05-26T03:36:11Z",
+          "completed_at": "2026-05-26T03:36:11Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/aryajava/glrc/check-runs/77803242619",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000000247,
+      "runner_name": "GitHub Actions 1000000247",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 77803242620,
+      "run_id": 26430709521,
+      "workflow_name": "Build and Release",
+      "head_branch": "v1.5.9",
+      "run_url": "https://api.github.com/repos/aryajava/glrc/actions/runs/26430709521",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORm6YM88AAAASHW9EfA",
+      "head_sha": "51327a63b5c85e92e760efa5b27eb8059512e67c",
+      "url": "https://api.github.com/repos/aryajava/glrc/actions/jobs/77803242620",
+      "html_url": "https://github.com/aryajava/glrc/actions/runs/26430709521/job/77803242620",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2026-05-26T03:34:23Z",
+      "started_at": "2026-05-26T03:34:25Z",
+      "completed_at": "2026-05-26T03:35:37Z",
+      "name": "Build on macos-latest",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2026-05-26T03:34:25Z",
+          "completed_at": "2026-05-26T03:34:26Z"
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2026-05-26T03:34:26Z",
+          "completed_at": "2026-05-26T03:34:27Z"
+        },
+        {
+          "name": "Setup Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2026-05-26T03:34:27Z",
+          "completed_at": "2026-05-26T03:34:42Z"
+        },
+        {
+          "name": "Install Linux system dependencies",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 4,
+          "started_at": "2026-05-26T03:34:42Z",
+          "completed_at": "2026-05-26T03:34:42Z"
+        },
+        {
+          "name": "Install dependencies",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2026-05-26T03:34:42Z",
+          "completed_at": "2026-05-26T03:34:53Z"
+        },
+        {
+          "name": "Build EN and ID binaries",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 6,
+          "started_at": "2026-05-26T03:34:53Z",
+          "completed_at": "2026-05-26T03:35:21Z"
+        },
+        {
+          "name": "Prepare Windows release assets",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 7,
+          "started_at": "2026-05-26T03:35:21Z",
+          "completed_at": "2026-05-26T03:35:21Z"
+        },
+        {
+          "name": "Prepare Linux release assets",
+          "status": "completed",
+          "conclusion": "skipped",
+          "number": 8,
+          "started_at": "2026-05-26T03:35:21Z",
+          "completed_at": "2026-05-26T03:35:21Z"
+        },
+        {
+          "name": "Prepare macOS release assets",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2026-05-26T03:35:21Z",
+          "completed_at": "2026-05-26T03:35:32Z"
+        },
+        {
+          "name": "Upload release artifacts",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2026-05-26T03:35:32Z",
+          "completed_at": "2026-05-26T03:35:34Z"
+        },
+        {
+          "name": "Post Setup Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 19,
+          "started_at": "2026-05-26T03:35:34Z",
+          "completed_at": "2026-05-26T03:35:34Z"
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 20,
+          "started_at": "2026-05-26T03:35:34Z",
+          "completed_at": "2026-05-26T03:35:34Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 21,
+          "started_at": "2026-05-26T03:35:34Z",
+          "completed_at": "2026-05-26T03:35:34Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/aryajava/glrc/check-runs/77803242620",
+      "labels": [
+        "macos-latest"
+      ],
+      "runner_id": 1000000249,
+      "runner_name": "GitHub Actions 1000000249",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    },
+    {
+      "id": 77803392752,
+      "run_id": 26430709521,
+      "workflow_name": "Build and Release",
+      "head_branch": "v1.5.9",
+      "run_url": "https://api.github.com/repos/aryajava/glrc/actions/runs/26430709521",
+      "run_attempt": 1,
+      "node_id": "CR_kwDORm6YM88AAAASHXGO8A",
+      "head_sha": "51327a63b5c85e92e760efa5b27eb8059512e67c",
+      "url": "https://api.github.com/repos/aryajava/glrc/actions/jobs/77803392752",
+      "html_url": "https://github.com/aryajava/glrc/actions/runs/26430709521/job/77803392752",
+      "status": "completed",
+      "conclusion": "skipped",
+      "created_at": "2026-05-26T03:36:12Z",
+      "started_at": "2026-05-26T03:36:12Z",
+      "completed_at": "2026-05-26T03:36:12Z",
+      "name": "Create GitHub Release",
+      "steps": [
+
+      ],
+      "check_run_url": "https://api.github.com/repos/aryajava/glrc/check-runs/77803392752",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": null,
+      "runner_name": null,
+      "runner_group_id": null,
+      "runner_group_name": null
+    }
+  ]
+}

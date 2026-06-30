@@ -8,6 +8,47 @@ from typing import List, Dict, Optional
 logger = logging.getLogger("glrc")
 
 
+def _separator_variants(path: str) -> list:
+    """
+    Generate all unique separator-swap variants of a project path.
+
+    For each path segment, replaces '_' with '-' and vice versa, producing
+    all combinations. The original path itself is excluded (already tried).
+
+    Example:
+        "group/msf_maintain_user" →
+            ["group/msf-maintain-user", "group/msf_maintain-user", "group/msf-maintain_user"]
+    """
+    import itertools
+
+    segments = path.split("/")
+
+    def segment_variants(seg: str) -> list:
+        """All unique underscore/hyphen swap combos for one segment."""
+        chars = list(seg)
+        sep_indices = [i for i, c in enumerate(chars) if c in ("_", "-")]
+        if not sep_indices:
+            return [seg]
+        variants = set()
+        for mask in itertools.product([False, True], repeat=len(sep_indices)):
+            new_chars = chars[:]
+            for swap, idx in zip(mask, sep_indices):
+                if swap:
+                    new_chars[idx] = "-" if chars[idx] == "_" else "_"
+            variants.add("".join(new_chars))
+        return list(variants)
+
+    all_segment_options = [segment_variants(seg) for seg in segments]
+    seen = {path}
+    results = []
+    for combo in itertools.product(*all_segment_options):
+        candidate = "/".join(combo)
+        if candidate not in seen:
+            seen.add(candidate)
+            results.append(candidate)
+    return results
+
+
 class GitLabAPI:
     """
     Class untuk handle semua operasi dengan GitLab API.
@@ -45,6 +86,27 @@ class GitLabAPI:
         except Exception as e:
             logger.warning("Connection test failed: %s", e)
             return False, None
+
+    def get_user_ssh_keys(self) -> List[Dict]:
+        """
+        Mengambil daftar SSH keys milik user dari GitLab.
+
+        Returns:
+            List of SSH key dictionaries, or empty list on failure.
+        """
+        try:
+            resp = requests.get(
+                f"{self.gitlab_url}/api/v4/user/keys",
+                headers=self.headers,
+                timeout=10
+            )
+            if resp.status_code == 200:
+                return resp.json()
+            else:
+                return []
+        except Exception as e:
+            logger.warning("Error fetching SSH keys: %s", e)
+            return []
 
     def fetch_all_projects(self) -> List[Dict]:
         """
@@ -115,57 +177,89 @@ class GitLabAPI:
             logger.warning("Error fetching branches for project %s: %s", project_id, e)
             return []
 
-    def validate_projects(self, project_paths: set) -> tuple[list, list]:
+    def validate_projects(self, project_paths: set) -> tuple:
         """
         Memvalidasi sekumpulan project path dengan melakukan ping ke GitLab API.
-        Jika path persis tidak ditemukan, akan mencoba melakukan pencarian berdasarkan nama repo.
-        
+
+        Step 1: Exact endpoint hit.
+        Step 2: Search fallback (match by path/name/path_with_namespace).
+        Step 3: Fuzzy retry — swap '_' ↔ '-' in each segment and repeat steps 1+2.
+
         Args:
             project_paths: Set of project paths (e.g. 'group/subgroup/project' or 'project_name')
-            
+
         Returns:
-            Tuple dari (valid_projects, invalid_projects)
+            Tuple of (valid_projects, invalid_projects, corrected_pairs)
+            where corrected_pairs is a list of (original_input, matched_path_with_namespace).
         """
         import urllib.parse
         valid_projects = []
         invalid_projects = []
-        
-        for path in project_paths:
-            encoded_path = urllib.parse.quote_plus(path)
+        corrected_pairs = []   # list of (original_input, matched_path_with_namespace)
+
+        def _try_exact(path: str):
+            """Try the direct projects/{encoded} endpoint. Returns project dict or None."""
             try:
-                # 1. Coba hit endpoint spesifik (jika input adalah full path/id yang valid)
+                encoded = urllib.parse.quote_plus(path)
                 resp = requests.get(
-                    f"{self.gitlab_url}/api/v4/projects/{encoded_path}",
+                    f"{self.gitlab_url}/api/v4/projects/{encoded}",
                     headers=self.headers,
                     timeout=10
                 )
                 if resp.status_code == 200:
-                    valid_projects.append(resp.json())
-                    continue
-                
-                # 2. Jika gagal (misal user hanya input nama repo tanpa namespace), coba search
+                    return resp.json()
+            except Exception as e:
+                logger.warning(f"Exact lookup error for {path}: {e}")
+            return None
+
+        def _try_search(path: str):
+            """Try the search endpoint and match by path/name/path_with_namespace. Returns project dict or None."""
+            try:
                 search_resp = requests.get(
-                    f"{self.gitlab_url}/api/v4/projects?search={urllib.parse.quote(path)}&simple=true",
+                    f"{self.gitlab_url}/api/v4/projects"
+                    f"?search={urllib.parse.quote(path)}&simple=true",
                     headers=self.headers,
                     timeout=10
                 )
                 if search_resp.status_code == 200:
-                    results = search_resp.json()
-                    found = False
-                    for proj in results:
-                        # Cocokkan nama atau path agar akurat
-                        if proj.get('path') == path or proj.get('name') == path or proj.get('path_with_namespace') == path:
-                            valid_projects.append(proj)
-                            found = True
-                            break
-                    
-                    if found:
-                        continue
-                
-                # Jika sama sekali tidak ditemukan
-                invalid_projects.append(path)
+                    name_only = path.split("/")[-1]
+                    for proj in search_resp.json():
+                        if (
+                            proj.get("path") == name_only
+                            or proj.get("name") == name_only
+                            or proj.get("path_with_namespace") == path
+                        ):
+                            return proj
             except Exception as e:
-                logger.warning(f"Error validating project {path}: {e}")
+                logger.warning(f"Search lookup error for {path}: {e}")
+            return None
+
+        for path in project_paths:
+            # --- Step 1: Exact hit ---
+            proj = _try_exact(path)
+            if proj:
+                valid_projects.append(proj)
+                continue
+
+            # --- Step 2: Search fallback ---
+            proj = _try_search(path)
+            if proj:
+                valid_projects.append(proj)
+                continue
+
+            # --- Step 3: Fuzzy separator swap retry (_↔-) ---
+            found_via_fuzzy = False
+            for variant in _separator_variants(path):
+                proj = _try_exact(variant)
+                if not proj:
+                    proj = _try_search(variant)
+                if proj:
+                    valid_projects.append(proj)
+                    corrected_pairs.append((path, proj.get("path_with_namespace", variant)))
+                    found_via_fuzzy = True
+                    break
+
+            if not found_via_fuzzy:
                 invalid_projects.append(path)
-                
-        return valid_projects, invalid_projects
+
+        return valid_projects, invalid_projects, corrected_pairs

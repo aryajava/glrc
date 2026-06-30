@@ -1568,13 +1568,16 @@ class GLRCApp(ctk.CTk):
 
         dest_folder = self.dest_entry.get().strip()
         for project in projects:
-            repo_name_full = project['path_with_namespace']
-            repo_name_only = project['name']
-            namespace = project['namespace']['full_path']
-            http_url = project['http_url_to_repo']
+            repo_name_full = project.get('path_with_namespace', '')
+            repo_name_only = project.get('name', repo_name_full.split('/')[-1] if repo_name_full else '')
+            _ns = project.get('namespace') or {}
+            namespace = _ns.get('full_path', '') if isinstance(_ns, dict) else ''
+            http_url = project.get('http_url_to_repo', '')
+            if not http_url:
+                continue
             ssh_url = project.get('ssh_url_to_repo', '')
             web_url = project.get('web_url', '')
-            project_id = project['id']
+            project_id = project.get('id', 0)
             last_activity = project.get('last_activity_at', '')
 
             # Determine if folder exists locally
@@ -1926,6 +1929,134 @@ class GLRCApp(ctk.CTk):
         clear_btn.pack(side="right")
         ToolTip(clear_btn, _("tooltip_clear_history"))
 
+        # --- Section: SSH Keys ---
+        self._settings_section_header(form, _("settings_ssh_keys"), colors)
+        ssh_row = ctk.CTkFrame(form, fg_color="transparent")
+        ssh_row.pack(fill="x", pady=(0, 8))
+        
+        ssh_enabled_var = tk.BooleanVar(value=self.config.get_ssh_enabled())
+        ctk.CTkLabel(ssh_row, text=_("ssh_enable_lbl"), font=ctk.CTkFont(family="Open Sans", size=12)).pack(side="left")
+        ssh_switch = ctk.CTkSwitch(ssh_row, text="", variable=ssh_enabled_var, width=44)
+        ssh_switch.pack(side="right")
+        
+        ssh_sub_frame = ctk.CTkFrame(form, fg_color="transparent")
+        
+        ssh_key_path_var = tk.StringVar(value=self.config.get_ssh_key_path())
+        
+        # 1.A Select SSH Key
+        ctk.CTkLabel(ssh_sub_frame, text=_("ssh_select_lbl"), anchor="w", font=ctk.CTkFont(family="Open Sans", size=12, weight="bold")).pack(fill="x", pady=(5,2))
+        select_row = ctk.CTkFrame(ssh_sub_frame, fg_color="transparent")
+        select_row.pack(fill="x", pady=(0, 5))
+        
+        path_entry = ctk.CTkEntry(select_row, textvariable=ssh_key_path_var, state="readonly", fg_color=colors["entry_bg"])
+        path_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        
+        def browse_ssh_key():
+            init_dir = os.path.expanduser("~/.ssh") if os.path.exists(os.path.expanduser("~/.ssh")) else os.path.expanduser("~")
+            filepath = filedialog.askopenfilename(
+                parent=modal,
+                initialdir=init_dir,
+                title="Select SSH Private Key",
+                filetypes=[("All Files", "*.*")]
+            )
+            if filepath:
+                path_entry.configure(state="normal")
+                ssh_key_path_var.set(filepath)
+                path_entry.configure(state="readonly")
+                
+        ctk.CTkButton(select_row, text=_("ssh_browse_btn"), width=70, command=browse_ssh_key).pack(side="right")
+        
+        def verify_ssh_key():
+            path = ssh_key_path_var.get()
+            if not path or not os.path.exists(path):
+                show_error(modal, _("error"), "Please select a valid SSH key file.")
+                return
+            pub_path = path + ".pub"
+            if not os.path.exists(pub_path):
+                show_error(modal, _("error"), f"Public key not found: {pub_path}")
+                return
+            try:
+                with open(pub_path, 'r') as f:
+                    pub_content = f.read().strip()
+                pub_key_parts = pub_content.split()
+                if len(pub_key_parts) >= 2:
+                    pub_key_string = pub_key_parts[1]
+                else:
+                    pub_key_string = pub_content
+            except Exception as e:
+                show_error(modal, _("error"), f"Failed to read public key:\n{e}")
+                return
+                
+            api = GitLabAPI(self.gitlab_url, self.api_token)
+            keys = api.get_user_ssh_keys()
+            
+            if not keys:
+                show_warning(modal, _("warning"), _("ssh_verify_fail_notfound", name=self.user_name, email=self.user_email))
+                return
+                
+            for k in keys:
+                if pub_key_string in k.get("key", ""):
+                    show_info(modal, _("ok"), _("ssh_verify_success", name=self.user_name, email=self.user_email))
+                    return
+            
+            show_warning(modal, _("warning"), _("ssh_verify_fail_mismatch", name=self.user_name, email=self.user_email))
+            
+        ctk.CTkButton(ssh_sub_frame, text=_("ssh_verify_btn"), fg_color="#27ae60", hover_color="#2ecc71", command=verify_ssh_key).pack(fill="x", pady=(0, 10))
+        
+        # 2. Generate SSH Key
+        ctk.CTkLabel(ssh_sub_frame, text=_("ssh_generate_lbl"), anchor="w", font=ctk.CTkFont(family="Open Sans", size=12, weight="bold")).pack(fill="x", pady=(5,2))
+        
+        def generate_ssh_key():
+            domain = self.user_email.split("@")[-1].split(".")[0] if "@" in self.user_email else "user"
+            host = urlparse(self.gitlab_url).netloc.split(":")[0].replace(".", "_")
+            default_name = f"id_ed25519_{domain}_{host}"
+            
+            gen_modal = ctk.CTkToplevel(modal)
+            gen_modal.title(_("ssh_generate_title"))
+            self.configure_modal_window(gen_modal, 400, 200)
+            
+            ctk.CTkLabel(gen_modal, text=_("ssh_key_name_lbl"), anchor="w").pack(fill="x", padx=20, pady=(20, 5))
+            name_var = tk.StringVar(value=default_name)
+            name_entry = ctk.CTkEntry(gen_modal, textvariable=name_var)
+            name_entry.pack(fill="x", padx=20)
+            
+            def do_generate():
+                name = name_var.get().strip()
+                if not name: return
+                ssh_dir = os.path.expanduser("~/.ssh")
+                os.makedirs(ssh_dir, exist_ok=True)
+                key_filepath = os.path.join(ssh_dir, name)
+                
+                if os.path.exists(key_filepath):
+                    if not show_confirmation(gen_modal, _("warning"), f"File {key_filepath} already exists. Overwrite?"):
+                        return
+                        
+                cmd = ["ssh-keygen", "-t", "ed25519", "-f", key_filepath, "-N", "", "-C", self.user_email]
+                creationflags = 0x08000000 if os.name == 'nt' or sys.platform == 'win32' else 0
+                try:
+                    subprocess.run(cmd, check=True, creationflags=creationflags)
+                    path_entry.configure(state="normal")
+                    ssh_key_path_var.set(key_filepath)
+                    path_entry.configure(state="readonly")
+                    show_info(gen_modal, _("ok"), _("ssh_key_generated", path=key_filepath))
+                    gen_modal.destroy()
+                except subprocess.CalledProcessError as e:
+                    show_error(gen_modal, _("error"), f"Failed to generate SSH key:\n{e}")
+                    
+            ctk.CTkButton(gen_modal, text=_("ssh_generate_btn"), command=do_generate).pack(pady=20)
+            gen_modal.grab_set()
+
+        ctk.CTkButton(ssh_sub_frame, text=_("ssh_generate_btn"), fg_color="#3498db", hover_color="#2980b9", command=generate_ssh_key).pack(fill="x", pady=(0, 10))
+        
+        def toggle_ssh_frame(*args):
+            if ssh_enabled_var.get():
+                ssh_sub_frame.pack(fill="x", pady=(0, 10))
+            else:
+                ssh_sub_frame.pack_forget()
+                
+        ssh_enabled_var.trace_add("write", toggle_ssh_frame)
+        toggle_ssh_frame()
+
         # --- Section: Interface (Direct Controls) ---
         self._settings_section_header(form, _("settings_interface"), colors)
         
@@ -1976,7 +2107,9 @@ class GLRCApp(ctk.CTk):
             "disk": str(self.config.get_min_disk_space_gb()),
             "limit": str(self.config.get_recent_limit()),
             "aot": bool(state.get("always_on_top")),
-            "opacity": int(state.get("opacity", 100))
+            "opacity": int(state.get("opacity", 100)),
+            "ssh_en": self.config.get_ssh_enabled(),
+            "ssh_path": self.config.get_ssh_key_path()
         }
 
         def has_changes():
@@ -1989,7 +2122,9 @@ class GLRCApp(ctk.CTk):
                     disk_var.get() != initial_state["disk"] or
                     recent_limit_var.get() != initial_state["limit"] or
                     aot_var.get() != initial_state["aot"] or
-                    opacity_var.get() != initial_state["opacity"]
+                    opacity_var.get() != initial_state["opacity"] or
+                    ssh_enabled_var.get() != initial_state["ssh_en"] or
+                    ssh_key_path_var.get() != initial_state["ssh_path"]
                 )
             except Exception: return True
 
@@ -2030,6 +2165,8 @@ class GLRCApp(ctk.CTk):
             self.config.set_min_disk_space_gb(space_val)
             self.config.set_recent_limit(int(recent_limit_var.get()))
             self.config.config_data["preferred_ide"] = ide_var.get()
+            self.config.set_ssh_enabled(ssh_enabled_var.get())
+            self.config.set_ssh_key_path(ssh_key_path_var.get())
             
             # Window State updates
             self.config.set_window_state({
@@ -2690,8 +2827,8 @@ class GLRCApp(ctk.CTk):
                     api = GitLabAPI(self.gitlab_url, self.api_token)
                     
                     self.write_log(_("generate_validating"))
-                    valid, invalid = api.validate_projects(cleaned_paths)
-                    self.schedule_ui(lambda: self._on_validation_complete(valid, invalid, total_lines, modal, set_generating))
+                    valid, invalid, corrected = api.validate_projects(cleaned_paths)
+                    self.schedule_ui(lambda: self._on_validation_complete(valid, invalid, corrected, total_lines, modal, set_generating))
                 except Exception as e:
                     def _show_validation_error(err=e):
                         if modal.winfo_exists():
@@ -2721,23 +2858,50 @@ class GLRCApp(ctk.CTk):
             modal.bind(sequence, generate_shortcut)
         refresh_recent_dropdown()
 
-    def _on_validation_complete(self, valid, invalid, total_lines, modal, set_generating=None):
+    def _on_validation_complete(self, valid, invalid, corrected, total_lines, modal, set_generating=None):
         if not modal.winfo_exists():
             return
 
         if set_generating is not None:
             set_generating(False)
-        
+
+        # --- Fuzzy-corrected badge label ---
+        # Remove any stale badge from a previous validation run in this same modal
+        existing_badge = getattr(modal, "_fuzzy_badge", None)
+        if existing_badge is not None:
+            try:
+                existing_badge.destroy()
+            except Exception:
+                pass
+            modal._fuzzy_badge = None
+
+        if corrected:
+            # Build tooltip text: header + one line per correction
+            header = _("fuzzy_fixed_tooltip_header")
+            lines = [f"  {orig}  →  {fixed}" for orig, fixed in corrected]
+            tip_text = header + "\n" + "\n".join(lines)
+
+            badge = ctk.CTkLabel(
+                modal,
+                text=_("fuzzy_fixed_label", count=len(corrected)),
+                text_color="#e67e22",
+                font=ctk.CTkFont(family="Open Sans", size=12, weight="bold"),
+                cursor="hand2",
+            )
+            badge.pack(pady=(0, 6))
+            ToolTip(badge, tip_text)
+            modal._fuzzy_badge = badge
+
         if not valid:
             show_error(modal, _("error"), _("generate_error_empty") + _("invalid_formats_count", count=len(invalid)))
             return
-            
+
         # Validation Preview Dialog
-        msg = _("ws_preview_msg", valid=len(valid), invalid=len(invalid))
+        msg = _("ws_preview_msg", valid=len(valid), invalid=len(invalid), corrected=len(corrected))
         proceed = show_custom_message(modal, _("ws_preview_title"), msg, icon_type="info", is_confirmation=True)
         if not proceed:
             return
-            
+
         filepath = filedialog.asksaveasfilename(
             parent=modal,
             title=_("export_ws"), defaultextension=".json", filetypes=[("JSON Files", "*.json")]
@@ -2752,14 +2916,14 @@ class GLRCApp(ctk.CTk):
                         "id": proj.get("id", 0)
                     }
             try:
-                with open(filepath, 'w') as f:
-                    json.dump(clean_data, f, indent=4)
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    json.dump(clean_data, f, indent=4, ensure_ascii=False)
                 self.config.add_recent_workspace(filepath)
                 show_info(modal, _("ok"), _("generate_success", total=total_lines, unique=len(valid)))
                 if modal.winfo_exists():
                     modal.destroy()
                 self.workspace_tools_modal = None
-                
+
                 self._do_import_workspace(filepath)
             except Exception as e:
                 show_error(modal, _("error"), _("failed_with_err", err=e))
@@ -2784,8 +2948,8 @@ class GLRCApp(ctk.CTk):
                         "name": info.get("name", ""),
                         "id": info.get("id", 0)
                     }
-                with open(filepath, 'w') as f:
-                    json.dump(clean_data, f, indent=4)
+                with open(filepath, 'w', encoding='utf-8') as f:
+                    json.dump(clean_data, f, indent=4, ensure_ascii=False)
                 self.config.add_recent_workspace(filepath)
                 show_info(dialog_parent, _("ok"), _("ws_exported", file=filepath))
             except Exception as e:
@@ -2803,17 +2967,24 @@ class GLRCApp(ctk.CTk):
     def _do_import_workspace(self, filepath, parent=None):
         dialog_parent = parent or self
         try:
-            with open(filepath, 'r') as f:
+            with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
             if not isinstance(data, dict):
                 show_error(dialog_parent, _("error"), _("ws_import_err"))
                 return
-            self.config.add_recent_workspace(filepath)
 
             # Merge into selected_repos
             count = 0
+            skipped = 0
             for url, info in data.items():
+                # Validate url is a proper HTTP/S string
+                if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+                    skipped += 1
+                    continue
+                # Validate info is a dict
+                if not isinstance(info, dict):
+                    info = {}
                 if url not in self.selected_repos:
                     self.selected_repos[url] = {
                         "name": info.get("name", ""),
@@ -2829,17 +3000,22 @@ class GLRCApp(ctk.CTk):
             cached_by_url = {p.get("http_url_to_repo"): p for p in self.cached_projects}
             projects = []
             for url, info in data.items():
+                # Skip invalid entries
+                if not isinstance(url, str) or not url.startswith(("http://", "https://")):
+                    continue
+                if not isinstance(info, dict):
+                    info = {}
                 if url in cached_by_url:
                     projects.append(cached_by_url[url])
                 else:
-                    path_with_ns = info.get("name", url.rstrip("/").split("/")[-1])
-                    if path_with_ns.endswith(".git"):
-                        path_with_ns = path_with_ns[:-4]
-                    parts = path_with_ns.split("/")
+                    raw_name = info.get("name", "") or url.rstrip("/").split("/")[-1]
+                    if raw_name.endswith(".git"):
+                        raw_name = raw_name[:-4]
+                    parts = raw_name.split("/")
                     name_only = parts[-1]
                     ns_path = "/".join(parts[:-1]) if len(parts) > 1 else ""
                     projects.append({
-                        "path_with_namespace": path_with_ns,
+                        "path_with_namespace": raw_name,
                         "name": name_only,
                         "namespace": {"full_path": ns_path},
                         "http_url_to_repo": url,
@@ -2853,6 +3029,8 @@ class GLRCApp(ctk.CTk):
             self.update_repo_list_ui()
             self.update_selection_action_buttons()
             show_info(dialog_parent, _("ok"), _("ws_imported", count=count))
+            # Only persist to recent workspaces after a fully successful import
+            self.config.add_recent_workspace(filepath)
         except json.JSONDecodeError:
             show_error(dialog_parent, _("error"), _("ws_import_err"))
         except Exception as e:
@@ -3369,6 +3547,14 @@ class GLRCApp(ctk.CTk):
 
         git_env["GIT_TERMINAL_PROMPT"] = "0"
         git_env["GIT_ASKPASS"] = ""
+        
+        # SSH Custom Key Setup
+        if clone_method == "SSH" and self.config.get_ssh_enabled():
+            ssh_key_path = self.config.get_ssh_key_path()
+            if ssh_key_path and os.path.exists(ssh_key_path):
+                normalized_key_path = ssh_key_path.replace("\\", "/")
+                git_env["GIT_SSH_COMMAND"] = f"ssh -i '{normalized_key_path}' -o IdentitiesOnly=yes"
+
 
         # Check if dir exists and is a git repo
         if os.path.isdir(repo_local_path) and os.path.isdir(os.path.join(repo_local_path, ".git")):
@@ -3529,7 +3715,7 @@ class GLRCApp(ctk.CTk):
                     })
 
                 # --- Set git config local ---
-                self._set_git_config_local(repo_local_path, repo_name)
+                self._set_git_config_local(repo_local_path, repo_name, clone_method)
 
                 # --- Buat branch baru jika diminta ---
                 if create_new_branch and new_branch_name:
@@ -3561,7 +3747,7 @@ class GLRCApp(ctk.CTk):
                         "success": False, "error": _("repo_clone_failed", repo_name=repo_name)
                     })
 
-    def _set_git_config_local(self, repo_path: str, repo_name: str):
+    def _set_git_config_local(self, repo_path: str, repo_name: str, clone_method: str = "HTTPS"):
         """Set git config user.name dan user.email secara local di repo yang baru di-clone."""
         if not os.path.isdir(repo_path):
             self.write_log(_("repo_dir_not_found"))
@@ -3574,6 +3760,14 @@ class GLRCApp(ctk.CTk):
             configs.append(("user.email", self.user_email))
         # Disable credential helper secara local agar tidak mengganggu token VS Code/Visual Studio
         configs.append(("credential.helper", ""))
+        
+        # SSH Custom Key Setup
+        if clone_method == "SSH" and self.config.get_ssh_enabled():
+            ssh_key_path = self.config.get_ssh_key_path()
+            if ssh_key_path and os.path.exists(ssh_key_path):
+                normalized_key_path = ssh_key_path.replace("\\", "/")
+                configs.append(("core.sshCommand", f"ssh -i '{normalized_key_path}' -o IdentitiesOnly=yes"))
+
 
         if not configs:
             self.write_log(_("gitlab_user_data_unavailable"))
