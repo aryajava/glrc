@@ -2049,7 +2049,24 @@ class GLRCApp(ctk.CTk):
                     path_entry.configure(state="normal")
                     ssh_key_path_var.set(key_filepath)
                     path_entry.configure(state="readonly")
-                    show_info(gen_modal, _("ok"), _("ssh_key_generated", path=key_filepath))
+                    
+                    # Upload public key to GitLab
+                    pub_path = key_filepath + ".pub"
+                    upload_msg = ""
+                    if os.path.exists(pub_path):
+                        try:
+                            with open(pub_path, 'r') as f:
+                                pub_content = f.read().strip()
+                            api = GitLabAPI(self.gitlab_url, self.api_token)
+                            success, err_msg = api.add_user_ssh_key(name, pub_content)
+                            if success:
+                                upload_msg = "\n\n" + _("ssh_upload_success")
+                            else:
+                                upload_msg = "\n\n" + _("ssh_upload_failed", error=err_msg)
+                        except Exception as e:
+                            upload_msg = "\n\n" + _("ssh_upload_failed", error=str(e))
+                    
+                    show_info(gen_modal, _("ok"), _("ssh_key_generated", path=key_filepath) + upload_msg)
                     gen_modal.destroy()
                 except subprocess.CalledProcessError as e:
                     show_error(gen_modal, _("error"), _("ssh_generate_failed", error=e))
@@ -3783,6 +3800,8 @@ class GLRCApp(ctk.CTk):
             if ssh_key_path and os.path.exists(ssh_key_path):
                 normalized_key_path = ssh_key_path.replace("\\", "/")
                 configs.append(("core.sshCommand", f"ssh -i '{normalized_key_path}' -o IdentitiesOnly=yes"))
+                configs.append(("gpg.format", "ssh"))
+                configs.append(("user.signingkey", normalized_key_path))
 
 
         if not configs:

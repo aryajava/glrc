@@ -286,6 +286,8 @@ _translations = {
         "ssh_pubkey_not_found": "Public key not found: {path}",
         "ssh_overwrite_confirm": "File {path} already exists. Overwrite?",
         "ssh_generate_failed": "Failed to generate SSH key:\n{error}",
+        "ssh_upload_success": "SSH Key has been successfully added to your GitLab account.",
+        "ssh_upload_failed": "SSH Key was generated locally, but failed to add to GitLab:\n{error}",
     },
     "id": {
         # General
@@ -569,6 +571,8 @@ _translations = {
         "ssh_pubkey_not_found": "Kunci publik tidak ditemukan: {path}",
         "ssh_overwrite_confirm": "File {path} sudah ada. Timpa?",
         "ssh_generate_failed": "Gagal membuat kunci SSH:\n{error}",
+        "ssh_upload_success": "SSH Key berhasil ditambahkan ke akun GitLab Anda.",
+        "ssh_upload_failed": "SSH Key berhasil dibuat lokal, tetapi gagal menambahkan ke GitLab:\n{error}",
     }
 }
 

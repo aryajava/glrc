@@ -108,6 +108,42 @@ class GitLabAPI:
             logger.warning("Error fetching SSH keys: %s", e)
             return []
 
+    def add_user_ssh_key(self, title: str, key: str) -> tuple[bool, str]:
+        """
+        Menambahkan SSH public key ke akun GitLab user.
+
+        Args:
+            title: Judul/nama untuk SSH key
+            key: Konten public key (isi file .pub)
+
+        Returns:
+            Tuple (success: bool, message: str)
+        """
+        try:
+            resp = requests.post(
+                f"{self.gitlab_url}/api/v4/user/keys",
+                headers=self.headers,
+                json={"title": title, "key": key},
+                timeout=10
+            )
+            if resp.status_code == 201:
+                return True, ""
+            else:
+                error_msg = resp.json().get("message", {})
+                if isinstance(error_msg, dict):
+                    # GitLab returns {"message": {"key": ["has already been taken"]}}
+                    details = []
+                    for field, msgs in error_msg.items():
+                        if isinstance(msgs, list):
+                            details.extend(msgs)
+                        else:
+                            details.append(str(msgs))
+                    error_msg = "; ".join(details) if details else str(error_msg)
+                return False, str(error_msg)
+        except Exception as e:
+            logger.warning("Error adding SSH key: %s", e)
+            return False, str(e)
+
     def fetch_all_projects(self) -> List[Dict]:
         """
         Mengambil semua projects dari GitLab instance (dengan pagination).
