@@ -3795,11 +3795,16 @@ class GLRCApp(ctk.CTk):
         configs.append(("credential.helper", ""))
         
         # SSH Custom Key Setup
-        if clone_method == "SSH" and self.config.get_ssh_enabled():
+        if self.config.get_ssh_enabled():
             ssh_key_path = self.config.get_ssh_key_path()
             if ssh_key_path and os.path.exists(ssh_key_path):
                 normalized_key_path = ssh_key_path.replace("\\", "/")
-                configs.append(("core.sshCommand", f"ssh -i '{normalized_key_path}' -o IdentitiesOnly=yes"))
+                
+                # Hanya set sshCommand jika transportnya SSH
+                if clone_method == "SSH":
+                    configs.append(("core.sshCommand", f"ssh -i '{normalized_key_path}' -o IdentitiesOnly=yes"))
+                
+                # GPG Signing via SSH (selalu set jika SSH key enabled, terlepas dari transport)
                 configs.append(("gpg.format", "ssh"))
                 configs.append(("user.signingkey", normalized_key_path + ".pub"))
                 configs.append(("commit.gpgsign", "true"))
