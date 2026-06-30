@@ -1948,7 +1948,7 @@ class GLRCApp(ctk.CTk):
         select_row = ctk.CTkFrame(ssh_sub_frame, fg_color="transparent")
         select_row.pack(fill="x", pady=(0, 5))
         
-        path_entry = ctk.CTkEntry(select_row, textvariable=ssh_key_path_var, state="readonly", fg_color=colors["entry_bg"])
+        path_entry = ctk.CTkEntry(select_row, textvariable=ssh_key_path_var, state="readonly", fg_color=colors["subtle_panel"])
         path_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
         
         def browse_ssh_key():
@@ -1956,8 +1956,8 @@ class GLRCApp(ctk.CTk):
             filepath = filedialog.askopenfilename(
                 parent=modal,
                 initialdir=init_dir,
-                title="Select SSH Private Key",
-                filetypes=[("All Files", "*.*")]
+                title=_("ssh_select_file_title"),
+                filetypes=[(_("ssh_file_filter"), "*.*")]
             )
             if filepath:
                 path_entry.configure(state="normal")
@@ -1969,11 +1969,11 @@ class GLRCApp(ctk.CTk):
         def verify_ssh_key():
             path = ssh_key_path_var.get()
             if not path or not os.path.exists(path):
-                show_error(modal, _("error"), "Please select a valid SSH key file.")
+                show_error(modal, _("error"), _("ssh_invalid_key_file"))
                 return
             pub_path = path + ".pub"
             if not os.path.exists(pub_path):
-                show_error(modal, _("error"), f"Public key not found: {pub_path}")
+                show_error(modal, _("error"), _("ssh_pubkey_not_found", path=pub_path))
                 return
             try:
                 with open(pub_path, 'r') as f:
@@ -1995,7 +1995,10 @@ class GLRCApp(ctk.CTk):
                 return
                 
             for k in keys:
-                if pub_key_string in k.get("key", ""):
+                remote_key = k.get("key", "")
+                remote_parts = remote_key.split()
+                remote_body = remote_parts[1] if len(remote_parts) >= 2 else remote_key
+                if pub_key_string == remote_body:
                     show_info(modal, _("ok"), _("ssh_verify_success", name=self.user_name, email=self.user_email))
                     return
             
@@ -2028,20 +2031,28 @@ class GLRCApp(ctk.CTk):
                 key_filepath = os.path.join(ssh_dir, name)
                 
                 if os.path.exists(key_filepath):
-                    if not show_confirmation(gen_modal, _("warning"), f"File {key_filepath} already exists. Overwrite?"):
+                    if not show_confirmation(gen_modal, _("warning"), _("ssh_overwrite_confirm", path=key_filepath)):
                         return
+                    # Remove existing files to prevent ssh-keygen interactive prompt
+                    try:
+                        os.remove(key_filepath)
+                        pub_file = key_filepath + ".pub"
+                        if os.path.exists(pub_file):
+                            os.remove(pub_file)
+                    except OSError:
+                        pass
                         
                 cmd = ["ssh-keygen", "-t", "ed25519", "-f", key_filepath, "-N", "", "-C", self.user_email]
                 creationflags = 0x08000000 if os.name == 'nt' or sys.platform == 'win32' else 0
                 try:
-                    subprocess.run(cmd, check=True, creationflags=creationflags)
+                    subprocess.run(cmd, check=True, creationflags=creationflags, stdin=subprocess.DEVNULL)
                     path_entry.configure(state="normal")
                     ssh_key_path_var.set(key_filepath)
                     path_entry.configure(state="readonly")
                     show_info(gen_modal, _("ok"), _("ssh_key_generated", path=key_filepath))
                     gen_modal.destroy()
                 except subprocess.CalledProcessError as e:
-                    show_error(gen_modal, _("error"), f"Failed to generate SSH key:\n{e}")
+                    show_error(gen_modal, _("error"), _("ssh_generate_failed", error=e))
                     
             ctk.CTkButton(gen_modal, text=_("ssh_generate_btn"), command=do_generate).pack(pady=20)
             gen_modal.grab_set()
@@ -3527,10 +3538,15 @@ class GLRCApp(ctk.CTk):
 
         parsed = urlparse(url)
         if clone_method == "SSH":
-            # e.g., git@gitlab.com:username/repo.git
-            host = parsed.netloc
+            host = parsed.hostname
             path = parsed.path.lstrip('/')
-            auth_url = f"git@{host}:{path}"
+            port = parsed.port
+            if port:
+                # Non-standard port: use ssh:// URL format
+                auth_url = f"ssh://git@{host}:{port}/{path}"
+            else:
+                # Standard port: use SCP-like format
+                auth_url = f"git@{host}:{path}"
         else:
             auth_url = parsed._replace(
                 netloc=f"oauth2:{quote(self.api_token)}@{parsed.netloc}"

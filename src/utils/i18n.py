@@ -281,6 +281,11 @@ _translations = {
         "ssh_key_name_lbl": "Key Name:",
         "ssh_key_generated": "SSH Key generated successfully at:\n{path}",
         "ssh_file_filter": "SSH Private Key",
+        "ssh_select_file_title": "Select SSH Private Key",
+        "ssh_invalid_key_file": "Please select a valid SSH key file.",
+        "ssh_pubkey_not_found": "Public key not found: {path}",
+        "ssh_overwrite_confirm": "File {path} already exists. Overwrite?",
+        "ssh_generate_failed": "Failed to generate SSH key:\n{error}",
     },
     "id": {
         # General
@@ -559,6 +564,11 @@ _translations = {
         "ssh_key_name_lbl": "Nama Kunci:",
         "ssh_key_generated": "SSH Key berhasil dibuat di:\n{path}",
         "ssh_file_filter": "SSH Private Key",
+        "ssh_select_file_title": "Pilih Kunci Privat SSH",
+        "ssh_invalid_key_file": "Silakan pilih file kunci SSH yang valid.",
+        "ssh_pubkey_not_found": "Kunci publik tidak ditemukan: {path}",
+        "ssh_overwrite_confirm": "File {path} sudah ada. Timpa?",
+        "ssh_generate_failed": "Gagal membuat kunci SSH:\n{error}",
     }
 }
 
